@@ -7,10 +7,11 @@
 #include <windows.h>
 #include <commctrl.h>
 #include <shlwapi.h>
-
+#include "Shlobj.h"
 #include "scintilla.h"
 #include "scilexer.h"
 #include "SciCall.h"
 #include "resource.h"
 
-#include "precheader.h"
+#include <string>
+

@@ -1,5 +1,6 @@
 #pragma once
 #include <windows.h>
+#include "Settings.h"
 
 bool isVista();
 bool InitApplication(HINSTANCE hInstance);
@@ -24,5 +25,7 @@ private:
 private:
     HINSTANCE   _instance;
     bool _isElevated = false;
+
+    Settings _settings;
 };
 

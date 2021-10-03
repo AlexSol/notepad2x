@@ -104,6 +104,8 @@
       <WarningLevel>Level3</WarningLevel>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <CompileAs>Default</CompileAs>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>precheader.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <AdditionalDependencies>comctl32.lib;imm32.lib;shlwapi.lib;msimg32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -211,6 +213,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Notepad2.c" />
     <ClCompile Include="Print.cpp" />
+    <ClCompile Include="Settings.cpp" />
     <ClCompile Include="Styles.c" />
   </ItemGroup>
   <ItemGroup>
@@ -220,8 +223,10 @@
     <ClInclude Include="Edit.h" />
     <ClInclude Include="Helpers.h" />
     <ClInclude Include="Notepad2.h" />
+    <ClInclude Include="pch.h" />
     <ClInclude Include="precheader.h" />
     <ClInclude Include="SciCall.h" />
+    <ClInclude Include="Settings.h" />
     <ClInclude Include="Styles.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Version.h" />

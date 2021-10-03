@@ -91,9 +91,13 @@ int Application::init()
 
     // Command Line, Ini File and Flags
     ParseCommandLine();
+    
+    _settings.load();
+
     FindIniFile();
     TestIniFile();
     CreateIniFile();
+
     LoadFlags();
 
     // set AppUserModelID
