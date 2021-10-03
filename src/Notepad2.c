@@ -39,7 +39,9 @@
 #include "SciCall.h"
 #include "resource.h"
 
+//------------------------------------------
 
+extern BOOL fIsElevated ;
 
 /******************************************************************************
 *
@@ -53,7 +55,7 @@ HWND      hwndEdit;
 HWND      hwndEditFrame;
 HWND      hwndMain;
 HWND      hwndNextCBChain = NULL;
-HWND      hDlgFindReplace = NULL;
+extern HWND      hDlgFindReplace;
 
 #define NUMTOOLBITMAPS  25
 #define NUMINITIALTOOLS 24
@@ -224,6 +226,8 @@ int       iEOLMode;
 int       iDefaultCodePage;
 int       iDefaultCharSet;
 
+UINT16    g_uWinVer;
+
 int       iInitialLine;
 int       iInitialColumn;
 
@@ -241,9 +245,8 @@ BOOL      bRunningWatch = FALSE;
 BOOL      dwChangeNotifyTime = 0;
 WIN32_FIND_DATA fdCurFile;
 
-UINT      msgTaskbarCreated = 0;
-
-HMODULE   hModUxTheme = NULL;
+extern UINT      msgTaskbarCreated;
+extern HMODULE   hModUxTheme;
 
 EDITFINDREPLACE efrData = { "", "", "", "", 0, 0, 0, 0, 0, 0, NULL };
 UINT cpLastFind = 0;
@@ -266,14 +269,12 @@ WCHAR wchAppendLines[256] = L"";
 int   iSortOptions = 0;
 int   iAlignMode   = 0;
 
-BOOL      fIsElevated = FALSE;
-WCHAR     wchWndClass[16] = WC_NOTEPAD2;
+extern WCHAR     wchWndClass[16];
 
-HINSTANCE g_hInstance;
+extern HINSTANCE g_hInstance;
 HANDLE    g_hScintilla;
-UINT16    g_uWinVer;
-WCHAR     g_wchAppUserModelID[32] = L"";
-WCHAR     g_wchWorkingDirectory[MAX_PATH] = L"";
+extern WCHAR     g_wchAppUserModelID[32];
+extern WCHAR g_wchWorkingDirectory[MAX_PATH];
 
 
 
@@ -362,7 +363,7 @@ int fNoFileVariables       = 0;
 int flagPosParam           = 0;
 int flagDefaultPos         = 0;
 int flagNewFromClipboard   = 0;
-int flagPasteBoard         = 0;
+extern int flagPasteBoard;
 int flagSetEncoding        = 0;
 int flagSetEOLMode         = 0;
 int flagJumpTo             = 0;
@@ -372,7 +373,7 @@ int flagLexerSpecified     = 0;
 int flagQuietCreate        = 0;
 int flagUseSystemMRU       = 0;
 int flagRelaunchElevated   = 0;
-int flagDisplayHelp        = 0;
+extern int flagDisplayHelp;
 
 
 
@@ -566,21 +567,13 @@ void __stdcall FoldAltArrow( int key, int mode )
 //  WinMain()
 //
 //
-int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInst,LPSTR lpCmdLine,int nCmdShow)
+int WINAPI runNotepad2(HINSTANCE hInstance,HINSTANCE hPrevInst,LPSTR lpCmdLine,int nCmdShow)
 {
-
-  MSG msg;
-  HWND hwnd;
-  HACCEL hAccMain;
-  HACCEL hAccFindReplace;
-  INITCOMMONCONTROLSEX icex;
-  //HMODULE hSciLexer;
   WCHAR wchWorkingDirectory[MAX_PATH];
 
   // Set global variable g_hInstance
   g_hInstance = hInstance;
 
-  // Set the Windows version global variable
   g_uWinVer = LOWORD(GetVersion());
   g_uWinVer = MAKEWORD(HIBYTE(g_uWinVer),LOBYTE(g_uWinVer));
 
@@ -590,145 +583,9 @@ int WINAPI WinMain(HINSTANCE hInstance,HINSTANCE hPrevInst,LPSTR lpCmdLine,int n
   PathRemoveFileSpec(wchWorkingDirectory);
   SetCurrentDirectory(wchWorkingDirectory);
 
-  SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOOPENFILEERRORBOX);
 
-  // check if running at least on Windows 2000
-  if (!Is2k()) {
-    LPVOID lpMsgBuf;
-    FormatMessage(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER|
-        FORMAT_MESSAGE_FROM_SYSTEM|
-        FORMAT_MESSAGE_IGNORE_INSERTS,
-        NULL,
-        ERROR_OLD_WIN_VERSION,
-        MAKELANGID(LANG_NEUTRAL,SUBLANG_DEFAULT), // Default language
-        (LPWSTR)&lpMsgBuf,
-        0,
-        NULL);
-    MessageBox(NULL,(LPCWSTR)lpMsgBuf,L"Notepad2-mod",MB_OK|MB_ICONEXCLAMATION);
-    LocalFree(lpMsgBuf);
-    return(0);
-  }
-
-  // Check if running with elevated privileges
-  fIsElevated = IsElevated();
-
-  // Default Encodings (may already be used for command line parsing)
-  Encoding_InitDefaults();
-
-  // Command Line, Ini File and Flags
-  ParseCommandLine();
-  FindIniFile();
-  TestIniFile();
-  CreateIniFile();
-  LoadFlags();
-
-  // set AppUserModelID
-  PrivateSetCurrentProcessExplicitAppUserModelID(g_wchAppUserModelID);
-
-  // Command Line Help Dialog
-  if (flagDisplayHelp) {
-    DisplayCmdLineHelp(NULL);
-    return(0);
-  }
-
-  // Adapt window class name
-  if (fIsElevated)
-    StrCat(wchWndClass,L"U");
-  if (flagPasteBoard)
-    StrCat(wchWndClass,L"B");
-
-  // Relaunch with elevated privileges
-  if (RelaunchElevated())
-    return(0);
-
-  // Try to run multiple instances
-  if (RelaunchMultiInst())
-    return(0);
-
-  // Try to activate another window
-  if (ActivatePrevInst())
-    return(0);
-
-  // Init OLE and Common Controls
-  OleInitialize(NULL);
-
-  icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
-  icex.dwICC  = ICC_WIN95_CLASSES|ICC_COOL_CLASSES|ICC_BAR_CLASSES|ICC_USEREX_CLASSES;
-  InitCommonControlsEx(&icex);
-
-  msgTaskbarCreated = RegisterWindowMessage(L"TaskbarCreated");
-
-  hModUxTheme = LoadLibrary(L"uxtheme.dll");
-
-  Scintilla_RegisterClasses(hInstance);
-
-  // Load Settings
-  LoadSettings();
-
-  if (!InitApplication(hInstance))
-    return FALSE;
-
-  if (!(hwnd = InitInstance(hInstance,lpCmdLine,nCmdShow)))
-    return FALSE;
-
-  hAccMain = LoadAccelerators(hInstance,MAKEINTRESOURCE(IDR_MAINWND));
-  hAccFindReplace = LoadAccelerators(hInstance,MAKEINTRESOURCE(IDR_ACCFINDREPLACE));
-
-  while (GetMessage(&msg,NULL,0,0))
-  {
-    if (IsWindow(hDlgFindReplace) && (msg.hwnd == hDlgFindReplace || IsChild(hDlgFindReplace,msg.hwnd)))
-      if (TranslateAccelerator(hDlgFindReplace,hAccFindReplace,&msg) || IsDialogMessage(hDlgFindReplace,&msg))
-        continue;
-
-    if (!TranslateAccelerator(hwnd,hAccMain,&msg)) {
-      TranslateMessage(&msg);
-      DispatchMessage(&msg);
-    }
-  }
-
-  // Save Settings is done elsewhere
-
-  Scintilla_ReleaseResources();
-  UnregisterClass(wchWndClass,hInstance);
-
-  if (hModUxTheme)
-    FreeLibrary(hModUxTheme);
-
-  OleUninitialize();
-
-  return(int)(msg.wParam);
-
-  hPrevInst;
-
+  return 1;
 }
-
-
-//=============================================================================
-//
-//  InitApplication()
-//
-//
-BOOL InitApplication(HINSTANCE hInstance)
-{
-
-  WNDCLASS   wc;
-
-  wc.style         = CS_BYTEALIGNWINDOW | CS_DBLCLKS;
-  wc.lpfnWndProc   = (WNDPROC)MainWndProc;
-  wc.cbClsExtra    = 0;
-  wc.cbWndExtra    = 0;
-  wc.hInstance     = hInstance;
-  wc.hIcon         = LoadIcon(hInstance,MAKEINTRESOURCE(IDR_MAINWND));
-  wc.hCursor       = LoadCursor(NULL,IDC_ARROW);
-  wc.hbrBackground = (HBRUSH)(COLOR_3DFACE+1);
-  wc.lpszMenuName  = MAKEINTRESOURCE(IDR_MAINWND);
-  wc.lpszClassName = wchWndClass;
-
-  return RegisterClass(&wc);
-
-}
-
 
 //=============================================================================
 //

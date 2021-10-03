@@ -96,7 +96,6 @@ typedef struct np2params {
 
 
 //==== Function Declarations ==================================================
-BOOL InitApplication(HINSTANCE);
 HWND InitInstance(HINSTANCE,LPSTR,int);
 BOOL ActivatePrevInst();
 BOOL RelaunchMultiInst();

@@ -161,36 +161,6 @@ HRESULT PrivateSetCurrentProcessExplicitAppUserModelID(PCWSTR AppID)
     return(S_OK);
 }
 
-
-//=============================================================================
-//
-//  IsElevated()
-//
-BOOL IsElevated() {
-
-  BOOL bIsElevated = FALSE;
-  HANDLE hToken = NULL;
-
-  if (!IsVista())
-    return(FALSE);
-
-  if (OpenProcessToken(GetCurrentProcess(),TOKEN_QUERY,&hToken)) {
-
-    struct {
-      DWORD TokenIsElevated;
-    } /*TOKEN_ELEVATION*/te;
-    DWORD dwReturnLength = 0;
-
-    if (GetTokenInformation(hToken,/*TokenElevation*/20,&te,sizeof(te),&dwReturnLength)) {
-        if (dwReturnLength == sizeof(te))
-          bIsElevated = te.TokenIsElevated;
-    }
-    CloseHandle(hToken);
-  }
-  return bIsElevated;
-}
-
-
 //=============================================================================
 //
 //  SetExplorerTheme()

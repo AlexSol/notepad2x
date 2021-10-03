@@ -74,7 +74,6 @@ __inline void EndWaitCursor()
 
 BOOL PrivateIsAppThemed();
 HRESULT PrivateSetCurrentProcessExplicitAppUserModelID(PCWSTR);
-BOOL IsElevated();
 //BOOL SetExplorerTheme(HWND);
 
 

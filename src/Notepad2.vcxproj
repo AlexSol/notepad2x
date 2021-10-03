@@ -203,20 +203,24 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Application.cpp" />
     <ClCompile Include="Dialogs.c" />
     <ClCompile Include="Dlapi.c" />
     <ClCompile Include="Edit.c" />
     <ClCompile Include="Helpers.c" />
+    <ClCompile Include="main.cpp" />
     <ClCompile Include="Notepad2.c" />
     <ClCompile Include="Print.cpp" />
     <ClCompile Include="Styles.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Application.h" />
     <ClInclude Include="Dialogs.h" />
     <ClInclude Include="Dlapi.h" />
     <ClInclude Include="Edit.h" />
     <ClInclude Include="Helpers.h" />
     <ClInclude Include="Notepad2.h" />
+    <ClInclude Include="precheader.h" />
     <ClInclude Include="SciCall.h" />
     <ClInclude Include="Styles.h" />
     <ClInclude Include="resource.h" />
