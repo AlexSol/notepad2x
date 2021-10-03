@@ -10,8 +10,7 @@ public:
     Application();
     ~Application();
 
-    void init();
-    void run();
+    int exec();
     static Application* getInstance();
 
     HINSTANCE getInstanceWin();
@@ -20,6 +19,8 @@ public:
 
 private:
     void elevated();
+    int init();
+
 private:
     HINSTANCE   _instance;
     bool _isElevated = false;

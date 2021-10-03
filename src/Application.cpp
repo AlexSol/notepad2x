@@ -8,6 +8,7 @@
 #include "resource.h"
 
 static UINT16 uWinVer;
+extern "C" UINT16 g_uWinVer = 0;
 
 extern "C" HINSTANCE g_hInstance = Application::getInstance()->getInstanceWin();
 
@@ -46,6 +47,7 @@ extern "C" int flagDisplayHelp = 0;
 Application::Application()
 {
     _instance = GetModuleHandle(nullptr);
+    g_hInstance = _instance;
 }
 
 Application::~Application()
@@ -61,10 +63,23 @@ Application::~Application()
     OleUninitialize();
 }
 
-void Application::init()
+int Application::exec()
 {
+    return init();
+}
+
+int Application::init()
+{
+    WCHAR wchWorkingDirectory[MAX_PATH];
     uWinVer = LOWORD(GetVersion());
     uWinVer = MAKEWORD(HIBYTE(uWinVer), LOBYTE(uWinVer));
+    g_uWinVer = uWinVer;
+
+    // Don't keep working directory locked
+    GetCurrentDirectory(MAX_PATH, g_wchWorkingDirectory);
+    GetModuleFileName(NULL, wchWorkingDirectory, MAX_PATH);
+    PathRemoveFileSpec(wchWorkingDirectory);
+    SetCurrentDirectory(wchWorkingDirectory);
 
     // Check if running with elevated privileges
     elevated();
@@ -87,7 +102,7 @@ void Application::init()
     // Command Line Help Dialog
     if (flagDisplayHelp) {
         DisplayCmdLineHelp(NULL);
-        return;
+        return -1;
     }
 
     // Adapt window class name
@@ -98,15 +113,15 @@ void Application::init()
 
     // Relaunch with elevated privileges
     if (RelaunchElevated())
-        return ;
+        return -1;
 
     // Try to run multiple instances
     if (RelaunchMultiInst())
-        return;
+        return -1;
 
     // Try to activate another window
     if (ActivatePrevInst())
-        return;
+        return -1;
 
     // Init OLE and Common Controls
     OleInitialize(NULL);
@@ -125,13 +140,13 @@ void Application::init()
     LoadSettings();
 
     if (!InitApplication(getInstanceWin())) {
-        return;
+        return -1;
     }
 
     HWND hwnd;
-    //if (!(hwnd = InitInstance(getInstanceWin(), lpCmdLine, nCmdShow))) {
+    //if (!(hwnd = InitInstance(hInstance, lpCmdLine, nCmdShow)))
     if (!(hwnd = InitInstance(getInstanceWin(), (char*)"", 1))) {
-        return;
+        return -1;
     }
 
     HACCEL hAccMain = LoadAccelerators(getInstanceWin(), MAKEINTRESOURCE(IDR_MAINWND));
@@ -149,10 +164,7 @@ void Application::init()
             DispatchMessage(&msg);
         }
     }
-}
-
-void Application::run()
-{
+    return msg.wParam;
 }
 
 Application* Application::getInstance()
@@ -210,7 +222,6 @@ bool isVista()
 
 bool InitApplication(HINSTANCE hInstance)
 {
-
     WNDCLASS   wc;
 
     wc.style = CS_BYTEALIGNWINDOW | CS_DBLCLKS;
@@ -225,5 +236,4 @@ bool InitApplication(HINSTANCE hInstance)
     wc.lpszClassName = wchWndClass;
 
     return RegisterClass(&wc);
-
 }

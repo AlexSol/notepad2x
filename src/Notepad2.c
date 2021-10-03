@@ -226,7 +226,7 @@ int       iEOLMode;
 int       iDefaultCodePage;
 int       iDefaultCharSet;
 
-UINT16    g_uWinVer;
+extern UINT16    g_uWinVer;
 
 int       iInitialLine;
 int       iInitialColumn;
@@ -558,33 +558,6 @@ void __stdcall FoldAltArrow( int key, int mode )
       if (key == SCK_RIGHT) FoldPerformAction(ln, mode, EXPAND);
     }
   }
-}
-
-
-
-//=============================================================================
-//
-//  WinMain()
-//
-//
-int WINAPI runNotepad2(HINSTANCE hInstance,HINSTANCE hPrevInst,LPSTR lpCmdLine,int nCmdShow)
-{
-  WCHAR wchWorkingDirectory[MAX_PATH];
-
-  // Set global variable g_hInstance
-  g_hInstance = hInstance;
-
-  g_uWinVer = LOWORD(GetVersion());
-  g_uWinVer = MAKEWORD(HIBYTE(g_uWinVer),LOBYTE(g_uWinVer));
-
-  // Don't keep working directory locked
-  GetCurrentDirectory(COUNTOF(g_wchWorkingDirectory),g_wchWorkingDirectory);
-  GetModuleFileName(NULL,wchWorkingDirectory,COUNTOF(wchWorkingDirectory));
-  PathRemoveFileSpec(wchWorkingDirectory);
-  SetCurrentDirectory(wchWorkingDirectory);
-
-
-  return 1;
 }
 
 //=============================================================================
