@@ -411,13 +411,13 @@ BOOL SetWindowTitle(HWND hwnd,UINT uIDAppName,BOOL bIsElevated,UINT uIDUntitled,
 //
 //  SetWindowTransparentMode()
 //
-void SetWindowTransparentMode(HWND hwnd,BOOL bTransparentMode)
+void SetWindowTransparentMode(HWND hwnd,BOOL transparentMode)
 {
   FARPROC fp;
   int  iAlphaPercent;
   BYTE bAlpha;
 
-  if (bTransparentMode) {
+  if (transparentMode) {
     if (fp = GetProcAddress(GetModuleHandle(L"User32"),"SetLayeredWindowAttributes")) {
       SetWindowLongPtr(hwnd,GWL_EXSTYLE,
         GetWindowLongPtr(hwnd,GWL_EXSTYLE) | WS_EX_LAYERED);

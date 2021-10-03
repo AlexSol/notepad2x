@@ -45,6 +45,78 @@ typedef struct np2params {
 } NP2PARAMS, *LPNP2PARAMS;
 
 
+typedef struct {
+    BOOL bSaveSettings;
+    BOOL bSaveRecentFiles;
+    BOOL bSaveFindReplace;
+
+    int     iPathNameFormat;
+    BOOL    fWordWrapG;
+    int     iWordWrapMode;
+    int     iWordWrapIndent;
+    int     iWordWrapSymbols;
+    BOOL    bShowWordWrapSymbols;
+    BOOL    bMatchBraces;
+    BOOL    bAutoCloseTags;
+    BOOL    bHiliteCurrentLine;
+    BOOL    bAutoIndent;
+    BOOL    bAutoCompleteWords;
+    BOOL    bShowIndentGuides;
+    BOOL    bTabsAsSpacesG;
+    BOOL    bBackspaceUnindents;
+    BOOL    bTabIndentsG;
+    int     iTabWidthG;
+    int     iIndentWidthG;
+    BOOL    bMarkLongLines;
+    int     iLongLinesLimitG;
+    int     iLongLineMode;
+    BOOL    bShowSelectionMargin;
+    BOOL    bShowLineNumbers;
+    BOOL    bShowCodeFolding;
+    int     iMarkOccurrences;
+    BOOL    bMarkOccurrencesMatchCase;
+    BOOL    bMarkOccurrencesMatchWords;
+    BOOL    bViewWhiteSpace;
+    BOOL    bViewEOLs;
+    int     iDefaultEncoding;
+    BOOL    bSkipUnicodeDetection;
+    BOOL    bLoadASCIIasUTF8;
+    BOOL    bLoadNFOasOEM;
+    BOOL    bNoEncodingTags;
+    int     iDefaultEOLMode;
+    BOOL    bFixLineEndings;
+    BOOL    bAutoStripBlanks;
+    int     iPrintHeader;
+    int     iPrintFooter;
+    int     iPrintColor;
+    int     iPrintZoom;
+    RECT    pagesetupMargin;
+    BOOL    bSaveBeforeRunningTools;
+    int     iFileWatchingMode;
+    BOOL    bResetFileWatching;
+    int     iEscFunction;
+    BOOL    bAlwaysOnTop;
+    BOOL    bMinimizeToTray;
+    BOOL    bTransparentMode;
+    WCHAR   tchToolbarButtons[512];
+    BOOL    bShowToolbar;
+    BOOL    bShowStatusbar;
+
+    int     cxEncodingDlg;
+    int     cyEncodingDlg;
+    int     cxRecodeDlg;
+    int     cyRecodeDlg;
+    int     cxFileMRUDlg;
+    int     cyFileMRUDlg;
+    int     cxOpenWithDlg;
+    int     cyOpenWithDlg;
+    int     cxFavoritesDlg;
+    int     cyFavoritesDlg;
+    int     xFindReplaceDlg;
+    int     yFindReplaceDlg;
+} T_Settings;
+
+
 //==== Toolbar Style ==========================================================
 #define WS_TOOLBAR (WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | \
                     TBSTYLE_TOOLTIPS | TBSTYLE_FLAT | TBSTYLE_ALTDRAG | \

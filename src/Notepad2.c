@@ -96,81 +96,31 @@ TBBUTTON  tbbMainWnd[] = { {0,IDT_FILE_NEW,TBSTATE_ENABLED,TBSTYLE_BUTTON,0,0},
 
 WCHAR      szIniFile[MAX_PATH] = L"";
 WCHAR      szIniFile2[MAX_PATH] = L"";
-BOOL      bSaveSettings;
-BOOL      bSaveRecentFiles;
-BOOL      bSaveFindReplace;
+
 WCHAR      tchLastSaveCopyDir[MAX_PATH] = L"";
 WCHAR      tchOpenWithDir[MAX_PATH];
 WCHAR      tchFavoritesDir[MAX_PATH];
 WCHAR      tchDefaultDir[MAX_PATH];
 WCHAR      tchDefaultExtension[64];
 WCHAR      tchFileDlgFilters[5*1024];
-WCHAR      tchToolbarButtons[512];
 WCHAR      tchToolbarBitmap[MAX_PATH];
 WCHAR      tchToolbarBitmapHot[MAX_PATH];
 WCHAR      tchToolbarBitmapDisabled[MAX_PATH];
-int       iPathNameFormat;
 BOOL      fWordWrap;
-BOOL      fWordWrapG;
-int       iWordWrapMode;
-int       iWordWrapIndent;
-int       iWordWrapSymbols;
-BOOL      bShowWordWrapSymbols;
-BOOL      bMatchBraces;
-BOOL      bAutoIndent;
-BOOL      bAutoCloseTags;
-BOOL      bShowIndentGuides;
-BOOL      bHiliteCurrentLine;
 BOOL      bTabsAsSpaces;
-BOOL      bTabsAsSpacesG;
 BOOL      bTabIndents;
-BOOL      bTabIndentsG;
-BOOL      bBackspaceUnindents;
 int       iTabWidth;
-int       iTabWidthG;
 int       iIndentWidth;
-int       iIndentWidthG;
-BOOL      bMarkLongLines;
 int       iLongLinesLimit;
-int       iLongLinesLimitG;
-int       iLongLineMode;
 int       iWrapCol = 0;
-BOOL      bShowSelectionMargin;
-BOOL      bShowLineNumbers;
-int       iMarkOccurrences;
-BOOL      bMarkOccurrencesMatchCase;
-BOOL      bMarkOccurrencesMatchWords;
-BOOL      bAutoCompleteWords;
-BOOL      bShowCodeFolding;
-BOOL      bViewWhiteSpace;
-BOOL      bViewEOLs;
-int       iDefaultEncoding;
-BOOL      bSkipUnicodeDetection;
-BOOL      bLoadASCIIasUTF8;
-BOOL      bLoadNFOasOEM;
-BOOL      bNoEncodingTags;
 int       iSrcEncoding = -1;
 int       iWeakSrcEncoding = -1;
-int       iDefaultEOLMode;
-BOOL      bFixLineEndings;
-BOOL      bAutoStripBlanks;
-int       iPrintHeader;
-int       iPrintFooter;
-int       iPrintColor;
-int       iPrintZoom;
-RECT      pagesetupMargin;
-BOOL      bSaveBeforeRunningTools;
-int       iFileWatchingMode;
-BOOL      bResetFileWatching;
 DWORD     dwFileCheckInverval;
 DWORD     dwAutoReloadTimeout;
-int       iEscFunction;
-BOOL      bAlwaysOnTop;
-BOOL      bMinimizeToTray;
-BOOL      bTransparentMode;
 BOOL      bTransparentModeAvailable;
-BOOL      bShowToolbar;
-BOOL      bShowStatusbar;
+
+
+T_Settings TEG_Settings;
 
 typedef struct _wi
 {
@@ -189,19 +139,6 @@ int     cyReBar;
 int     cyReBarFrame;
 int     cxEditFrame;
 int     cyEditFrame;
-
-int     cxEncodingDlg;
-int     cyEncodingDlg;
-int     cxRecodeDlg;
-int     cyRecodeDlg;
-int     cxFileMRUDlg;
-int     cyFileMRUDlg;
-int     cxOpenWithDlg;
-int     cyOpenWithDlg;
-int     cxFavoritesDlg;
-int     cyFavoritesDlg;
-int     xFindReplaceDlg;
-int     yFindReplaceDlg;
 
 LPWSTR      lpFileList[32];
 int         cFileList = 0;
@@ -518,7 +455,7 @@ void __stdcall FoldAltArrow( int key, int mode )
   // Because Alt-Shift is already in use (and because the sibling fold feature
   // is not as useful from the keyboard), only the Ctrl modifier is supported
 
-  if (bShowCodeFolding && (mode & (SCMOD_ALT | SCMOD_SHIFT)) == SCMOD_ALT)
+  if (TEG_Settings.bShowCodeFolding && (mode & (SCMOD_ALT | SCMOD_SHIFT)) == SCMOD_ALT)
   {
     int ln = SciCall_LineFromPosition(SciCall_GetCurrentPos());
 
@@ -672,10 +609,10 @@ HWND InitInstance(HINSTANCE hInstance,LPSTR pszCmdLine,int nCmdShow)
   if (wi.max)
     nCmdShow = SW_SHOWMAXIMIZED;
 
-  if ((bAlwaysOnTop || flagAlwaysOnTop == 2) && flagAlwaysOnTop != 1)
+  if ((TEG_Settings.bAlwaysOnTop || flagAlwaysOnTop == 2) && flagAlwaysOnTop != 1)
     SetWindowPos(hwndMain,HWND_TOPMOST,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE);
 
-  if (bTransparentMode)
+  if (TEG_Settings.bTransparentMode)
     SetWindowTransparentMode(hwndMain,TRUE);
 
   // Current file information -- moved in front of ShowWindow()
@@ -717,13 +654,13 @@ HWND InitInstance(HINSTANCE hInstance,LPSTR pszCmdLine,int nCmdShow)
 
     if (bOpened) {
       if (flagChangeNotify == 1) {
-        iFileWatchingMode = 0;
-        bResetFileWatching = TRUE;
+        TEG_Settings.iFileWatchingMode = 0;
+        TEG_Settings.bResetFileWatching = TRUE;
         InstallFileWatching(szCurFile);
       }
       else if (flagChangeNotify == 2) {
-        iFileWatchingMode = 2;
-        bResetFileWatching = TRUE;
+        TEG_Settings.iFileWatchingMode = 2;
+        TEG_Settings.bResetFileWatching = TRUE;
         InstallFileWatching(szCurFile);
       }
     }
@@ -745,8 +682,8 @@ HWND InitInstance(HINSTANCE hInstance,LPSTR pszCmdLine,int nCmdShow)
   // Check for /c [if no file is specified] -- even if a file is specified
   /*else */if (flagNewFromClipboard) {
     if (SendMessage(hwndEdit,SCI_CANPASTE,0,0)) {
-      BOOL bAutoIndent2 = bAutoIndent;
-      bAutoIndent = 0;
+      BOOL bAutoIndent2 = TEG_Settings.bAutoIndent;
+      TEG_Settings.bAutoIndent = 0;
       EditJumpTo(hwndEdit,-1,0);
       SendMessage(hwndEdit,SCI_BEGINUNDOACTION,0,0);
       if (SendMessage(hwndEdit,SCI_GETLENGTH,0,0) > 0)
@@ -754,7 +691,7 @@ HWND InitInstance(HINSTANCE hInstance,LPSTR pszCmdLine,int nCmdShow)
       SendMessage(hwndEdit,SCI_PASTE,0,0);
       SendMessage(hwndEdit,SCI_NEWLINE,0,0);
       SendMessage(hwndEdit,SCI_ENDUNDOACTION,0,0);
-      bAutoIndent = bAutoIndent2;
+      TEG_Settings.bAutoIndent = bAutoIndent2;
       if (flagJumpTo)
         EditJumpTo(hwndEdit,iInitialLine,iInitialColumn);
       EditEnsureSelectionVisible(hwndEdit);
@@ -817,7 +754,7 @@ HWND InitInstance(HINSTANCE hInstance,LPSTR pszCmdLine,int nCmdShow)
     hwndNextCBChain = SetClipboardViewer(hwndMain);
     uidsAppTitle = IDS_APPTITLE_PASTEBOARD;
     SetWindowTitle(hwndMain,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
-      iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
+        TEG_Settings.iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
       IDS_READONLY,bReadOnly,szTitleExcerpt);
     bLastCopyFromMe = FALSE;
 
@@ -918,7 +855,7 @@ LRESULT CALLBACK MainWndProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARAM lParam)
         if (lstrlen(szIniFile) != 0) {
 
           // Cleanup unwanted MRU's
-          if (!bSaveRecentFiles) {
+          if (!TEG_Settings.bSaveRecentFiles) {
             MRU_Empty(pFileMRU);
             MRU_Save(pFileMRU);
           }
@@ -926,7 +863,7 @@ LRESULT CALLBACK MainWndProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARAM lParam)
             MRU_MergeSave(pFileMRU,TRUE,flagRelativeFileMRU,flagPortableMyDocs);
           MRU_Destroy(pFileMRU);
 
-          if (!bSaveFindReplace) {
+          if (!TEG_Settings.bSaveFindReplace) {
             MRU_Empty(mruFind);
             MRU_Empty(mruReplace);
             MRU_Save(mruFind);
@@ -1066,13 +1003,13 @@ LRESULT CALLBACK MainWndProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARAM lParam)
             if (bOpened) {
 
               if (params->flagChangeNotify == 1) {
-                iFileWatchingMode = 0;
-                bResetFileWatching = TRUE;
+                TEG_Settings.iFileWatchingMode = 0;
+                TEG_Settings.bResetFileWatching = TRUE;
                 InstallFileWatching(szCurFile);
               }
               else if (params->flagChangeNotify == 2) {
-                iFileWatchingMode = 2;
-                bResetFileWatching = TRUE;
+                TEG_Settings.iFileWatchingMode = 2;
+                TEG_Settings.bResetFileWatching = TRUE;
                 InstallFileWatching(szCurFile);
               }
 
@@ -1109,7 +1046,7 @@ LRESULT CALLBACK MainWndProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARAM lParam)
               if (params->flagTitleExcerpt) {
                 lstrcpyn(szTitleExcerpt,StrEnd(&params->wchData)+1,COUNTOF(szTitleExcerpt));
                 SetWindowTitle(hwnd,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
-                  iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
+                    TEG_Settings.iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
                   IDS_READONLY,bReadOnly,szTitleExcerpt);
               }
             }
@@ -1214,7 +1151,7 @@ LRESULT CALLBACK MainWndProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARAM lParam)
       {
         case SC_MINIMIZE:
           ShowOwnedPopups(hwnd,FALSE);
-          if (bMinimizeToTray) {
+          if (TEG_Settings.bMinimizeToTray) {
             MinimizeWndToTray(hwnd);
             ShowNotifyIcon(hwnd,TRUE);
             SetNotifyIconTitle(hwnd);
@@ -1233,12 +1170,12 @@ LRESULT CALLBACK MainWndProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARAM lParam)
 
 
       case WM_CHANGENOTIFY:
-          if (iFileWatchingMode == 1 || bModified || iEncoding != iOriginalEncoding)
+          if (TEG_Settings.iFileWatchingMode == 1 || bModified || iEncoding != iOriginalEncoding)
             SetForegroundWindow(hwnd);
 
           if (PathFileExists(szCurFile)) {
 
-            if ((iFileWatchingMode == 2 && !bModified && iEncoding == iOriginalEncoding) ||
+            if ((TEG_Settings.iFileWatchingMode == 2 && !bModified && iEncoding == iOriginalEncoding) ||
                  MsgBox(MBYESNO,IDS_FILECHANGENOTIFY) == IDYES) {
 
               int iCurPos     = (int)SendMessage(hwndEdit,SCI_GETCURRENTPOS,0,0);
@@ -1251,7 +1188,7 @@ LRESULT CALLBACK MainWndProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARAM lParam)
               iWeakSrcEncoding = iEncoding;
               if (FileLoad(TRUE,FALSE,TRUE,FALSE,szCurFile)) {
 
-                if (bIsTail && iFileWatchingMode == 2) {
+                if (bIsTail && TEG_Settings.iFileWatchingMode == 2) {
                   EditJumpTo(hwndEdit,-1,0);
                   EditEnsureSelectionVisible(hwndEdit);
                 }
@@ -1386,25 +1323,25 @@ LRESULT MsgCreate(HWND hwnd,WPARAM wParam,LPARAM lParam)
   // Tabs
   SendMessage(hwndEdit,SCI_SETUSETABS,!bTabsAsSpaces,0);
   SendMessage(hwndEdit,SCI_SETTABINDENTS,bTabIndents,0);
-  SendMessage(hwndEdit,SCI_SETBACKSPACEUNINDENTS,bBackspaceUnindents,0);
+  SendMessage(hwndEdit,SCI_SETBACKSPACEUNINDENTS,TEG_Settings.bBackspaceUnindents,0);
   SendMessage(hwndEdit,SCI_SETTABWIDTH,iTabWidth,0);
   SendMessage(hwndEdit,SCI_SETINDENT,iIndentWidth,0);
 
   // Indent Guides
-  Style_SetIndentGuides(hwndEdit,bShowIndentGuides);
+  Style_SetIndentGuides(hwndEdit,TEG_Settings.bShowIndentGuides);
 
   // Word wrap
   if (!fWordWrap)
     SendMessage(hwndEdit,SCI_SETWRAPMODE,SC_WRAP_NONE,0);
   else
-    SendMessage(hwndEdit,SCI_SETWRAPMODE,(iWordWrapMode == 0) ? SC_WRAP_WORD : SC_WRAP_CHAR,0);
-  if (iWordWrapIndent == 5)
+    SendMessage(hwndEdit,SCI_SETWRAPMODE,(TEG_Settings.iWordWrapMode == 0) ? SC_WRAP_WORD : SC_WRAP_CHAR,0);
+  if (TEG_Settings.iWordWrapIndent == 5)
     SendMessage(hwndEdit,SCI_SETWRAPINDENTMODE,SC_WRAPINDENT_SAME,0);
-  else if (iWordWrapIndent == 6)
+  else if (TEG_Settings.iWordWrapIndent == 6)
     SendMessage(hwndEdit,SCI_SETWRAPINDENTMODE,SC_WRAPINDENT_INDENT,0);
   else {
     int i = 0;
-    switch (iWordWrapIndent) {
+    switch (TEG_Settings.iWordWrapIndent) {
       case 1: i = 1; break;
       case 2: i = 2; break;
       case 3: i = (iIndentWidth) ? 1 * iIndentWidth : 1 * iTabWidth; break;
@@ -1413,16 +1350,16 @@ LRESULT MsgCreate(HWND hwnd,WPARAM wParam,LPARAM lParam)
     SendMessage(hwndEdit,SCI_SETWRAPSTARTINDENT,i,0);
     SendMessage(hwndEdit,SCI_SETWRAPINDENTMODE,SC_WRAPINDENT_FIXED,0);
   }
-  if (bShowWordWrapSymbols) {
+  if (TEG_Settings.bShowWordWrapSymbols) {
     int wrapVisualFlags = 0;
     int wrapVisualFlagsLocation = 0;
-    if (iWordWrapSymbols == 0)
-      iWordWrapSymbols = 22;
-    switch (iWordWrapSymbols%10) {
+    if (TEG_Settings.iWordWrapSymbols == 0)
+        TEG_Settings.iWordWrapSymbols = 22;
+    switch (TEG_Settings.iWordWrapSymbols%10) {
       case 1: wrapVisualFlags |= SC_WRAPVISUALFLAG_END; wrapVisualFlagsLocation |= SC_WRAPVISUALFLAGLOC_END_BY_TEXT; break;
       case 2: wrapVisualFlags |= SC_WRAPVISUALFLAG_END; break;
     }
-    switch (((iWordWrapSymbols%100)-(iWordWrapSymbols%10))/10) {
+    switch (((TEG_Settings.iWordWrapSymbols%100)-(TEG_Settings.iWordWrapSymbols%10))/10) {
       case 1: wrapVisualFlags |= SC_WRAPVISUALFLAG_START; wrapVisualFlagsLocation |= SC_WRAPVISUALFLAGLOC_START_BY_TEXT; break;
       case 2: wrapVisualFlags |= SC_WRAPVISUALFLAG_START; break;
     }
@@ -1434,23 +1371,23 @@ LRESULT MsgCreate(HWND hwnd,WPARAM wParam,LPARAM lParam)
   }
 
   // Long Lines
-  if (bMarkLongLines)
-    SendMessage(hwndEdit,SCI_SETEDGEMODE,(iLongLineMode == EDGE_LINE)?EDGE_LINE:EDGE_BACKGROUND,0);
+  if (TEG_Settings.bMarkLongLines)
+    SendMessage(hwndEdit,SCI_SETEDGEMODE,(TEG_Settings.iLongLineMode == EDGE_LINE)?EDGE_LINE:EDGE_BACKGROUND,0);
   else
     SendMessage(hwndEdit,SCI_SETEDGEMODE,EDGE_NONE,0);
   SendMessage(hwndEdit,SCI_SETEDGECOLUMN,iLongLinesLimit,0);
 
   // Margins
   SendMessage(hwndEdit,SCI_SETMARGINWIDTHN,2,0);
-  SendMessage(hwndEdit,SCI_SETMARGINWIDTHN,1,(bShowSelectionMargin)?16:0);
+  SendMessage(hwndEdit,SCI_SETMARGINWIDTHN,1,(TEG_Settings.bShowSelectionMargin)?16:0);
   UpdateLineNumberWidth();
   //SendMessage(hwndEdit,SCI_SETMARGINWIDTHN,0,
-  //  (bShowLineNumbers)?SendMessage(hwndEdit,SCI_TEXTWIDTH,STYLE_LINENUMBER,(LPARAM)L"_999999_"):0);
+  //  (TEG_Settings.bShowLineNumbers)?SendMessage(hwndEdit,SCI_TEXTWIDTH,STYLE_LINENUMBER,(LPARAM)L"_999999_"):0);
 
   // Code folding
   SciCall_SetMarginType(MARGIN_FOLD_INDEX, SC_MARGIN_SYMBOL);
   SciCall_SetMarginMask(MARGIN_FOLD_INDEX, SC_MASK_FOLDERS);
-  SciCall_SetMarginWidth(MARGIN_FOLD_INDEX, (bShowCodeFolding) ? 11 : 0);
+  SciCall_SetMarginWidth(MARGIN_FOLD_INDEX, (TEG_Settings.bShowCodeFolding) ? 11 : 0);
   SciCall_SetMarginSensitive(MARGIN_FOLD_INDEX, TRUE);
   SciCall_MarkerDefine(SC_MARKNUM_FOLDEROPEN, SC_MARK_BOXMINUS);
   SciCall_MarkerDefine(SC_MARKNUM_FOLDER, SC_MARK_BOXPLUS);
@@ -1462,8 +1399,8 @@ LRESULT MsgCreate(HWND hwnd,WPARAM wParam,LPARAM lParam)
   SciCall_SetFoldFlags(16);
 
   // Nonprinting characters
-  SendMessage(hwndEdit,SCI_SETVIEWWS,(bViewWhiteSpace)?SCWS_VISIBLEALWAYS:SCWS_INVISIBLE,0);
-  SendMessage(hwndEdit,SCI_SETVIEWEOL,bViewEOLs,0);
+  SendMessage(hwndEdit,SCI_SETVIEWWS,(TEG_Settings.bViewWhiteSpace)?SCWS_VISIBLEALWAYS:SCWS_INVISIBLE,0);
+  SendMessage(hwndEdit,SCI_SETVIEWEOL,TEG_Settings.bViewEOLs,0);
 
   hwndEditFrame = CreateWindowEx(
                     WS_EX_CLIENTEDGE,
@@ -1590,7 +1527,7 @@ void CreateBars(HWND hwnd,HINSTANCE hInstance)
   WCHAR *pIniSection = NULL;
   int   cchIniSection = 0;
 
-  if (bShowToolbar)
+  if (TEG_Settings.bShowToolbar)
     dwReBarStyle |= WS_VISIBLE;
 
   hwndToolbar = CreateWindowEx(0,TOOLBARCLASSNAME,NULL,dwToolbarStyle,
@@ -1696,12 +1633,12 @@ void CreateBars(HWND hwnd,HINSTANCE hInstance)
     SendMessage(hwndToolbar,TB_GETEXTENDEDSTYLE,0,0) | TBSTYLE_EX_MIXEDBUTTONS);
 
   SendMessage(hwndToolbar,TB_ADDBUTTONS,NUMINITIALTOOLS,(LPARAM)tbbMainWnd);
-  if (Toolbar_SetButtons(hwndToolbar,IDT_FILE_NEW,tchToolbarButtons,tbbMainWnd,COUNTOF(tbbMainWnd)) == 0)
+  if (Toolbar_SetButtons(hwndToolbar,IDT_FILE_NEW,TEG_Settings.tchToolbarButtons,tbbMainWnd,COUNTOF(tbbMainWnd)) == 0)
     SendMessage(hwndToolbar,TB_ADDBUTTONS,NUMINITIALTOOLS,(LPARAM)tbbMainWnd);
   SendMessage(hwndToolbar,TB_GETITEMRECT,0,(LPARAM)&rc);
   //SendMessage(hwndToolbar,TB_SETINDENT,2,0);
 
-  if (bShowStatusbar)
+  if (TEG_Settings.bShowStatusbar)
     dwStatusbarStyle |= WS_VISIBLE;
 
   hwndStatus = CreateStatusWindow(dwStatusbarStyle,NULL,hwnd,IDC_STATUSBAR);
@@ -1781,7 +1718,7 @@ void MsgThemeChanged(HWND hwnd,WPARAM wParam,LPARAM lParam)
   }
 
   // recreate toolbar and statusbar
-  Toolbar_GetButtons(hwndToolbar,IDT_FILE_NEW,tchToolbarButtons,COUNTOF(tchToolbarButtons));
+  Toolbar_GetButtons(hwndToolbar,IDT_FILE_NEW,TEG_Settings.tchToolbarButtons,COUNTOF(TEG_Settings.tchToolbarButtons));
 
   DestroyWindow(hwndToolbar);
   DestroyWindow(hwndReBar);
@@ -1819,7 +1756,7 @@ void MsgSize(HWND hwnd,WPARAM wParam,LPARAM lParam)
   cx = LOWORD(lParam);
   cy = HIWORD(lParam);
 
-  if (bShowToolbar)
+  if (TEG_Settings.bShowToolbar)
   {
 /*  SendMessage(hwndToolbar,WM_SIZE,0,0);
     GetWindowRect(hwndToolbar,&rc);
@@ -1838,7 +1775,7 @@ void MsgSize(HWND hwnd,WPARAM wParam,LPARAM lParam)
     cy -= cyReBar + cyReBarFrame;  // border
   }
 
-  if (bShowStatusbar)
+  if (TEG_Settings.bShowStatusbar)
   {
     SendMessage(hwndStatus,WM_SIZE,0,0);
     GetWindowRect(hwndStatus,&rc);
@@ -2040,23 +1977,23 @@ void MsgInitMenu(HWND hwnd,WPARAM wParam,LPARAM lParam)
   EnableCmd(hmenu, CMD_CTRLBACK, i);
   EnableCmd(hmenu, CMD_CTRLDEL, i);
   EnableCmd(hmenu, CMD_TIMESTAMPS, i);
-  EnableCmd(hmenu,IDM_VIEW_TOGGLEFOLDS,i && bShowCodeFolding);
-  CheckCmd(hmenu,IDM_VIEW_FOLDING,bShowCodeFolding);
+  EnableCmd(hmenu,IDM_VIEW_TOGGLEFOLDS,i && TEG_Settings.bShowCodeFolding);
+  CheckCmd(hmenu,IDM_VIEW_FOLDING,TEG_Settings.bShowCodeFolding);
 
   CheckCmd(hmenu,IDM_VIEW_USE2NDDEFAULT,Style_GetUse2ndDefault(hwndEdit));
 
   CheckCmd(hmenu,IDM_VIEW_WORDWRAP,fWordWrap);
-  CheckCmd(hmenu,IDM_VIEW_LONGLINEMARKER,bMarkLongLines);
+  CheckCmd(hmenu,IDM_VIEW_LONGLINEMARKER,TEG_Settings.bMarkLongLines);
   CheckCmd(hmenu,IDM_VIEW_TABSASSPACES,bTabsAsSpaces);
-  CheckCmd(hmenu,IDM_VIEW_SHOWINDENTGUIDES,bShowIndentGuides);
-  CheckCmd(hmenu,IDM_VIEW_AUTOINDENTTEXT,bAutoIndent);
-  CheckCmd(hmenu,IDM_VIEW_LINENUMBERS,bShowLineNumbers);
-  CheckCmd(hmenu,IDM_VIEW_MARGIN,bShowSelectionMargin);
+  CheckCmd(hmenu,IDM_VIEW_SHOWINDENTGUIDES,TEG_Settings.bShowIndentGuides);
+  CheckCmd(hmenu,IDM_VIEW_AUTOINDENTTEXT, TEG_Settings.bAutoIndent);
+  CheckCmd(hmenu,IDM_VIEW_LINENUMBERS,TEG_Settings.bShowLineNumbers);
+  CheckCmd(hmenu,IDM_VIEW_MARGIN,TEG_Settings.bShowSelectionMargin);
 
   EnableCmd(hmenu,IDM_EDIT_COMPLETEWORD,i);
-  CheckCmd(hmenu,IDM_VIEW_AUTOCOMPLETEWORDS,bAutoCompleteWords);
+  CheckCmd(hmenu,IDM_VIEW_AUTOCOMPLETEWORDS, TEG_Settings.bAutoCompleteWords);
 
-  switch (iMarkOccurrences)
+  switch (TEG_Settings.iMarkOccurrences)
   {
     case 0: i = IDM_VIEW_MARKOCCURRENCES_OFF; break;
     case 3: i = IDM_VIEW_MARKOCCURRENCES_BLUE; break;
@@ -2064,23 +2001,23 @@ void MsgInitMenu(HWND hwnd,WPARAM wParam,LPARAM lParam)
     case 1: i = IDM_VIEW_MARKOCCURRENCES_RED; break;
   }
   CheckMenuRadioItem(hmenu,IDM_VIEW_MARKOCCURRENCES_OFF,IDM_VIEW_MARKOCCURRENCES_RED,i,MF_BYCOMMAND);
-  CheckCmd(hmenu,IDM_VIEW_MARKOCCURRENCES_CASE,bMarkOccurrencesMatchCase);
-  CheckCmd(hmenu,IDM_VIEW_MARKOCCURRENCES_WORD,bMarkOccurrencesMatchWords);
-  EnableCmd(hmenu,IDM_VIEW_MARKOCCURRENCES_CASE,iMarkOccurrences != 0);
-  EnableCmd(hmenu,IDM_VIEW_MARKOCCURRENCES_WORD,iMarkOccurrences != 0);
+  CheckCmd(hmenu,IDM_VIEW_MARKOCCURRENCES_CASE,TEG_Settings.bMarkOccurrencesMatchCase);
+  CheckCmd(hmenu,IDM_VIEW_MARKOCCURRENCES_WORD,TEG_Settings.bMarkOccurrencesMatchWords);
+  EnableCmd(hmenu,IDM_VIEW_MARKOCCURRENCES_CASE,TEG_Settings.iMarkOccurrences != 0);
+  EnableCmd(hmenu,IDM_VIEW_MARKOCCURRENCES_WORD,TEG_Settings.iMarkOccurrences != 0);
 
-  CheckCmd(hmenu,IDM_VIEW_SHOWWHITESPACE,bViewWhiteSpace);
-  CheckCmd(hmenu,IDM_VIEW_SHOWEOLS,bViewEOLs);
-  CheckCmd(hmenu,IDM_VIEW_WORDWRAPSYMBOLS,bShowWordWrapSymbols);
-  CheckCmd(hmenu,IDM_VIEW_MATCHBRACES,bMatchBraces);
-  CheckCmd(hmenu,IDM_VIEW_TOOLBAR,bShowToolbar);
-  EnableCmd(hmenu,IDM_VIEW_CUSTOMIZETB,bShowToolbar);
-  CheckCmd(hmenu,IDM_VIEW_STATUSBAR,bShowStatusbar);
+  CheckCmd(hmenu,IDM_VIEW_SHOWWHITESPACE,TEG_Settings.bViewWhiteSpace);
+  CheckCmd(hmenu,IDM_VIEW_SHOWEOLS,TEG_Settings.bViewEOLs);
+  CheckCmd(hmenu,IDM_VIEW_WORDWRAPSYMBOLS, TEG_Settings.bShowWordWrapSymbols);
+  CheckCmd(hmenu,IDM_VIEW_MATCHBRACES, TEG_Settings.bMatchBraces);
+  CheckCmd(hmenu,IDM_VIEW_TOOLBAR,TEG_Settings.bShowToolbar);
+  EnableCmd(hmenu,IDM_VIEW_CUSTOMIZETB,TEG_Settings.bShowToolbar);
+  CheckCmd(hmenu,IDM_VIEW_STATUSBAR,TEG_Settings.bShowStatusbar);
 
   i = (int)SendMessage(hwndEdit,SCI_GETLEXER,0,0);
   //EnableCmd(hmenu,IDM_VIEW_AUTOCLOSETAGS,(i == SCLEX_HTML || i == SCLEX_XML));
-  CheckCmd(hmenu,IDM_VIEW_AUTOCLOSETAGS,bAutoCloseTags /*&& (i == SCLEX_HTML || i == SCLEX_XML)*/);
-  CheckCmd(hmenu,IDM_VIEW_HILITECURRENTLINE,bHiliteCurrentLine);
+  CheckCmd(hmenu,IDM_VIEW_AUTOCLOSETAGS, TEG_Settings.bAutoCloseTags /*&& (i == SCLEX_HTML || i == SCLEX_XML)*/);
+  CheckCmd(hmenu,IDM_VIEW_HILITECURRENTLINE, TEG_Settings.bHiliteCurrentLine);
 
   i = IniGetInt(L"Settings2",L"ReuseWindow",0);
   CheckCmd(hmenu,IDM_VIEW_REUSEWINDOW,i);
@@ -2088,37 +2025,37 @@ void MsgInitMenu(HWND hwnd,WPARAM wParam,LPARAM lParam)
   CheckCmd(hmenu,IDM_VIEW_SINGLEFILEINSTANCE,i);
   bStickyWinPos = IniGetInt(L"Settings2",L"StickyWindowPosition",0);
   CheckCmd(hmenu,IDM_VIEW_STICKYWINPOS,bStickyWinPos);
-  CheckCmd(hmenu,IDM_VIEW_ALWAYSONTOP,((bAlwaysOnTop || flagAlwaysOnTop == 2) && flagAlwaysOnTop != 1));
-  CheckCmd(hmenu,IDM_VIEW_MINTOTRAY,bMinimizeToTray);
-  CheckCmd(hmenu,IDM_VIEW_TRANSPARENT,bTransparentMode && bTransparentModeAvailable);
+  CheckCmd(hmenu,IDM_VIEW_ALWAYSONTOP,((TEG_Settings.bAlwaysOnTop || flagAlwaysOnTop == 2) && flagAlwaysOnTop != 1));
+  CheckCmd(hmenu,IDM_VIEW_MINTOTRAY,TEG_Settings.bMinimizeToTray);
+  CheckCmd(hmenu,IDM_VIEW_TRANSPARENT,TEG_Settings.bTransparentMode && bTransparentModeAvailable);
   EnableCmd(hmenu,IDM_VIEW_TRANSPARENT,bTransparentModeAvailable);
 
-  CheckCmd(hmenu,IDM_VIEW_NOSAVERECENT,bSaveRecentFiles);
-  CheckCmd(hmenu,IDM_VIEW_NOSAVEFINDREPL,bSaveFindReplace);
-  CheckCmd(hmenu,IDM_VIEW_SAVEBEFORERUNNINGTOOLS,bSaveBeforeRunningTools);
+  CheckCmd(hmenu,IDM_VIEW_NOSAVERECENT, TEG_Settings.bSaveRecentFiles);
+  CheckCmd(hmenu,IDM_VIEW_NOSAVEFINDREPL, TEG_Settings.bSaveFindReplace);
+  CheckCmd(hmenu,IDM_VIEW_SAVEBEFORERUNNINGTOOLS,TEG_Settings.bSaveBeforeRunningTools);
 
-  CheckCmd(hmenu,IDM_VIEW_CHANGENOTIFY,iFileWatchingMode);
+  CheckCmd(hmenu,IDM_VIEW_CHANGENOTIFY,TEG_Settings.iFileWatchingMode);
 
   if (lstrlen(szTitleExcerpt))
     i = IDM_VIEW_SHOWEXCERPT;
-  else if (iPathNameFormat == 0)
+  else if (TEG_Settings.iPathNameFormat == 0)
     i = IDM_VIEW_SHOWFILENAMEONLY;
-  else if (iPathNameFormat == 1)
+  else if (TEG_Settings.iPathNameFormat == 1)
     i = IDM_VIEW_SHOWFILENAMEFIRST;
   else
     i = IDM_VIEW_SHOWFULLPATH;
   CheckMenuRadioItem(hmenu,IDM_VIEW_SHOWFILENAMEONLY,IDM_VIEW_SHOWEXCERPT,i,MF_BYCOMMAND);
 
-  if (iEscFunction == 1)
+  if (TEG_Settings.iEscFunction == 1)
     i = IDM_VIEW_ESCMINIMIZE;
-  else if (iEscFunction == 2)
+  else if (TEG_Settings.iEscFunction == 2)
     i = IDM_VIEW_ESCEXIT;
   else
     i = IDM_VIEW_NOESCFUNC;
   CheckMenuRadioItem(hmenu,IDM_VIEW_NOESCFUNC,IDM_VIEW_ESCEXIT,i,MF_BYCOMMAND);
 
   i = lstrlen(szIniFile);
-  CheckCmd(hmenu,IDM_VIEW_SAVESETTINGS,bSaveSettings && i);
+  CheckCmd(hmenu,IDM_VIEW_SAVESETTINGS, TEG_Settings.bSaveSettings && i);
 
   EnableCmd(hmenu,IDM_VIEW_REUSEWINDOW,i);
   EnableCmd(hmenu,IDM_VIEW_STICKYWINPOS,i);
@@ -2231,7 +2168,7 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
           bReadOnly = (dwFileAttributes & FILE_ATTRIBUTE_READONLY);
 
         SetWindowTitle(hwnd,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
-          iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
+            TEG_Settings.iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
           IDS_READONLY,bReadOnly,szTitleExcerpt);
       }
       break;
@@ -2306,7 +2243,7 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
         int x,y,cx,cy,imax;
         WCHAR tch[64];
 
-        if (bSaveBeforeRunningTools && !FileSave(FALSE,TRUE,FALSE,FALSE))
+        if (TEG_Settings.bSaveBeforeRunningTools && !FileSave(FALSE,TRUE,FALSE,FALSE))
           break;
 
         GetModuleFileName(NULL,szModuleName,COUNTOF(szModuleName));
@@ -2383,7 +2320,7 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
         if (!lstrlen(szCurFile))
           break;
 
-        if (bSaveBeforeRunningTools && !FileSave(FALSE,TRUE,FALSE,FALSE))
+        if (TEG_Settings.bSaveBeforeRunningTools && !FileSave(FALSE,TRUE,FALSE,FALSE))
           break;
 
         if (lstrlen(szCurFile)) {
@@ -2411,7 +2348,7 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
       {
         WCHAR tchCmdLine[MAX_PATH+4];
 
-        if (bSaveBeforeRunningTools && !FileSave(FALSE,TRUE,FALSE,FALSE))
+        if (TEG_Settings.bSaveBeforeRunningTools && !FileSave(FALSE,TRUE,FALSE,FALSE))
           break;
 
         lstrcpy(tchCmdLine,szCurFile);
@@ -2423,7 +2360,7 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
 
 
     case IDM_FILE_OPENWITH:
-      if (bSaveBeforeRunningTools && !FileSave(FALSE,TRUE,FALSE,FALSE))
+      if (TEG_Settings.bSaveBeforeRunningTools && !FileSave(FALSE,TRUE,FALSE,FALSE))
         break;
       OpenWithDlg(hwnd,szCurFile);
       break;
@@ -2595,7 +2532,7 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
           UpdateStatusbar();
 
           SetWindowTitle(hwnd,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
-            iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
+              TEG_Settings.iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
             IDS_READONLY,bReadOnly,szTitleExcerpt);
         }
       }
@@ -2633,7 +2570,7 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
 
 
     case IDM_ENCODING_SETDEFAULT:
-      SelectDefEncodingDlg(hwnd,&iDefaultEncoding);
+      SelectDefEncodingDlg(hwnd,&TEG_Settings.iDefaultEncoding);
       break;
 
 
@@ -2649,14 +2586,14 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
         UpdateToolbar();
         UpdateStatusbar();
         SetWindowTitle(hwnd,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
-          iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
+            TEG_Settings.iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
           IDS_READONLY,bReadOnly,szTitleExcerpt);
       }
       break;
 
 
     case IDM_LINEENDINGS_SETDEFAULT:
-      SelectDefLineEndingDlg(hwnd,&iDefaultEOLMode);
+      SelectDefLineEndingDlg(hwnd,&TEG_Settings.iDefaultEOLMode);
       break;
 
 
@@ -3502,7 +3439,7 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
         else
         {
 
-            if( bShowSelectionMargin )
+            if( TEG_Settings.bShowSelectionMargin )
             {
                 SendMessage( hwndEdit , SCI_MARKERDEFINEPIXMAP , 0 , (LPARAM)bookmark_pixmap );
             }
@@ -3655,24 +3592,24 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
       if (!fWordWrap)
         SendMessage(hwndEdit,SCI_SETWRAPMODE,SC_WRAP_NONE,0);
       else
-        SendMessage(hwndEdit,SCI_SETWRAPMODE,(iWordWrapMode == 0) ? SC_WRAP_WORD : SC_WRAP_CHAR,0);
-      fWordWrapG = fWordWrap;
+        SendMessage(hwndEdit,SCI_SETWRAPMODE,(TEG_Settings.iWordWrapMode == 0) ? SC_WRAP_WORD : SC_WRAP_CHAR,0);
+      TEG_Settings.fWordWrapG = fWordWrap;
       UpdateToolbar();
       break;
 
 
     case IDM_VIEW_WORDWRAPSETTINGS:
-      if (WordWrapSettingsDlg(hwnd,IDD_WORDWRAP,&iWordWrapIndent))
+      if (WordWrapSettingsDlg(hwnd,IDD_WORDWRAP,&TEG_Settings.iWordWrapIndent))
       {
         if (fWordWrap)
-          SendMessage(hwndEdit,SCI_SETWRAPMODE,(iWordWrapMode == 0) ? SC_WRAP_WORD : SC_WRAP_CHAR,0);
-        if (iWordWrapIndent == 5)
+          SendMessage(hwndEdit,SCI_SETWRAPMODE,(TEG_Settings.iWordWrapMode == 0) ? SC_WRAP_WORD : SC_WRAP_CHAR,0);
+        if (TEG_Settings.iWordWrapIndent == 5)
           SendMessage(hwndEdit,SCI_SETWRAPINDENTMODE,SC_WRAPINDENT_SAME,0);
-        else if (iWordWrapIndent == 6)
+        else if (TEG_Settings.iWordWrapIndent == 6)
           SendMessage(hwndEdit,SCI_SETWRAPINDENTMODE,SC_WRAPINDENT_INDENT,0);
         else {
           int i = 0;
-          switch (iWordWrapIndent) {
+          switch (TEG_Settings.iWordWrapIndent) {
             case 1: i = 1; break;
             case 2: i = 2; break;
             case 3: i = (iIndentWidth) ? 1 * iIndentWidth : 1 * iTabWidth; break;
@@ -3681,16 +3618,16 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
           SendMessage(hwndEdit,SCI_SETWRAPSTARTINDENT,i,0);
           SendMessage(hwndEdit,SCI_SETWRAPINDENTMODE,SC_WRAPINDENT_FIXED,0);
         }
-        if (bShowWordWrapSymbols) {
+        if (TEG_Settings.bShowWordWrapSymbols) {
           int wrapVisualFlags = 0;
           int wrapVisualFlagsLocation = 0;
-          if (iWordWrapSymbols == 0)
-            iWordWrapSymbols = 22;
-          switch (iWordWrapSymbols%10) {
+          if (TEG_Settings.iWordWrapSymbols == 0)
+              TEG_Settings.iWordWrapSymbols = 22;
+          switch (TEG_Settings.iWordWrapSymbols%10) {
             case 1: wrapVisualFlags |= SC_WRAPVISUALFLAG_END; wrapVisualFlagsLocation |= SC_WRAPVISUALFLAGLOC_END_BY_TEXT; break;
             case 2: wrapVisualFlags |= SC_WRAPVISUALFLAG_END; break;
           }
-          switch (((iWordWrapSymbols%100)-(iWordWrapSymbols%10))/10) {
+          switch (((TEG_Settings.iWordWrapSymbols%100)-(TEG_Settings.iWordWrapSymbols%10))/10) {
             case 1: wrapVisualFlags |= SC_WRAPVISUALFLAG_START; wrapVisualFlagsLocation |= SC_WRAPVISUALFLAGLOC_START_BY_TEXT; break;
             case 2: wrapVisualFlags |= SC_WRAPVISUALFLAG_START; break;
           }
@@ -3705,9 +3642,9 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
 
 
     case IDM_VIEW_LONGLINEMARKER:
-      bMarkLongLines = (bMarkLongLines) ? FALSE: TRUE;
-      if (bMarkLongLines) {
-        SendMessage(hwndEdit,SCI_SETEDGEMODE,(iLongLineMode == EDGE_LINE)?EDGE_LINE:EDGE_BACKGROUND,0);
+      TEG_Settings.bMarkLongLines = (TEG_Settings.bMarkLongLines) ? FALSE: TRUE;
+      if (TEG_Settings.bMarkLongLines) {
+        SendMessage(hwndEdit,SCI_SETEDGEMODE,(TEG_Settings.iLongLineMode == EDGE_LINE)?EDGE_LINE:EDGE_BACKGROUND,0);
         Style_SetLongLineColors(hwndEdit);
       }
       else
@@ -3718,13 +3655,13 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
 
     case IDM_VIEW_LONGLINESETTINGS:
       if (LongLineSettingsDlg(hwnd,IDD_LONGLINES,&iLongLinesLimit)) {
-        bMarkLongLines = TRUE;
-        SendMessage(hwndEdit,SCI_SETEDGEMODE,(iLongLineMode == EDGE_LINE)?EDGE_LINE:EDGE_BACKGROUND,0);
+        TEG_Settings.bMarkLongLines = TRUE;
+        SendMessage(hwndEdit,SCI_SETEDGEMODE,(TEG_Settings.iLongLineMode == EDGE_LINE)?EDGE_LINE:EDGE_BACKGROUND,0);
         Style_SetLongLineColors(hwndEdit);
         iLongLinesLimit = max(min(iLongLinesLimit,4096),0);
         SendMessage(hwndEdit,SCI_SETEDGECOLUMN,iLongLinesLimit,0);
         UpdateStatusbar();
-        iLongLinesLimitG = iLongLinesLimit;
+        TEG_Settings.iLongLinesLimitG = iLongLinesLimit;
       }
       break;
 
@@ -3732,7 +3669,7 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
     case IDM_VIEW_TABSASSPACES:
       bTabsAsSpaces = (bTabsAsSpaces) ? FALSE : TRUE;
       SendMessage(hwndEdit,SCI_SETUSETABS,!bTabsAsSpaces,0);
-      bTabsAsSpacesG = bTabsAsSpaces;
+      TEG_Settings.bTabsAsSpacesG = bTabsAsSpaces;
       break;
 
 
@@ -3741,18 +3678,18 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
       {
         SendMessage(hwndEdit,SCI_SETUSETABS,!bTabsAsSpaces,0);
         SendMessage(hwndEdit,SCI_SETTABINDENTS,bTabIndents,0);
-        SendMessage(hwndEdit,SCI_SETBACKSPACEUNINDENTS,bBackspaceUnindents,0);
+        SendMessage(hwndEdit,SCI_SETBACKSPACEUNINDENTS,TEG_Settings.bBackspaceUnindents,0);
         iTabWidth = max(min(iTabWidth,256),1);
         iIndentWidth = max(min(iIndentWidth,256),0);
         SendMessage(hwndEdit,SCI_SETTABWIDTH,iTabWidth,0);
         SendMessage(hwndEdit,SCI_SETINDENT,iIndentWidth,0);
-        bTabsAsSpacesG = bTabsAsSpaces;
-        bTabIndentsG   = bTabIndents;
-        iTabWidthG     = iTabWidth;
-        iIndentWidthG  = iIndentWidth;
+        TEG_Settings.bTabsAsSpacesG = bTabsAsSpaces;
+        TEG_Settings.bTabIndentsG   = bTabIndents;
+        TEG_Settings.iTabWidthG     = iTabWidth;
+        TEG_Settings.iIndentWidthG  = iIndentWidth;
         if (SendMessage(hwndEdit,SCI_GETWRAPINDENTMODE,0,0) == SC_WRAPINDENT_FIXED) {
           int i = 0;
-          switch (iWordWrapIndent) {
+          switch (TEG_Settings.iWordWrapIndent) {
             case 1: i = 1; break;
             case 2: i = 2; break;
             case 3: i = (iIndentWidth) ? 1 * iIndentWidth : 1 * iTabWidth; break;
@@ -3765,31 +3702,31 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
 
 
     case IDM_VIEW_SHOWINDENTGUIDES:
-      bShowIndentGuides = (bShowIndentGuides) ? FALSE : TRUE;
-      Style_SetIndentGuides(hwndEdit,bShowIndentGuides);
+      TEG_Settings.bShowIndentGuides = (TEG_Settings.bShowIndentGuides) ? FALSE : TRUE;
+      Style_SetIndentGuides(hwndEdit,TEG_Settings.bShowIndentGuides);
       break;
 
 
     case IDM_VIEW_AUTOINDENTTEXT:
-      bAutoIndent = (bAutoIndent) ? FALSE : TRUE;
+        TEG_Settings.bAutoIndent = (TEG_Settings.bAutoIndent) ? FALSE : TRUE;
       break;
 
 
     case IDM_VIEW_LINENUMBERS:
-      bShowLineNumbers = (bShowLineNumbers) ? FALSE : TRUE;
+      TEG_Settings.bShowLineNumbers = (TEG_Settings.bShowLineNumbers) ? FALSE : TRUE;
       UpdateLineNumberWidth();
       //SendMessage(hwndEdit,SCI_SETMARGINWIDTHN,0,
-      //  (bShowLineNumbers)?SendMessage(hwndEdit,SCI_TEXTWIDTH,STYLE_LINENUMBER,(LPARAM)"_999999_"):0);
+      //  (TEG_Settings.bShowLineNumbers)?SendMessage(hwndEdit,SCI_TEXTWIDTH,STYLE_LINENUMBER,(LPARAM)"_999999_"):0);
       break;
 
 
     case IDM_VIEW_MARGIN:
-      bShowSelectionMargin = (bShowSelectionMargin) ? FALSE : TRUE;
-      SendMessage(hwndEdit,SCI_SETMARGINWIDTHN,1,(bShowSelectionMargin)?16:0);
+      TEG_Settings.bShowSelectionMargin = (TEG_Settings.bShowSelectionMargin) ? FALSE : TRUE;
+      SendMessage(hwndEdit,SCI_SETMARGINWIDTHN,1,(TEG_Settings.bShowSelectionMargin)?16:0);
 
 #ifdef BOOKMARK_EDITION
         //Depending on if the margin is visible or not, choose different bookmark indication
-        if( bShowSelectionMargin )
+        if( TEG_Settings.bShowSelectionMargin )
         {
             SendMessage( hwndEdit , SCI_MARKERDEFINEPIXMAP , 0 , (LPARAM)bookmark_pixmap );
         }
@@ -3804,53 +3741,53 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
       break;
 
     case IDM_VIEW_AUTOCOMPLETEWORDS:
-      if (bAutoCompleteWords) {
+      if (TEG_Settings.bAutoCompleteWords) {
         // close the autocompletion list
         SendMessage(hwndEdit, SCI_AUTOCCANCEL, 0, 0);
-        bAutoCompleteWords = FALSE;
+        TEG_Settings.bAutoCompleteWords = FALSE;
       }
       else {
-        bAutoCompleteWords = TRUE;
+          TEG_Settings.bAutoCompleteWords = TRUE;
       }
       break;
 
     case IDM_VIEW_MARKOCCURRENCES_OFF:
-      iMarkOccurrences = 0;
+      TEG_Settings.iMarkOccurrences = 0;
       // clear all marks
       SendMessage(hwndEdit, SCI_SETINDICATORCURRENT, 1, 0);
       SendMessage(hwndEdit, SCI_INDICATORCLEARRANGE, 0, (int)SendMessage(hwndEdit,SCI_GETLENGTH,0,0));
       break;
 
     case IDM_VIEW_MARKOCCURRENCES_RED:
-      iMarkOccurrences = 1;
-      EditMarkAll(hwndEdit, iMarkOccurrences, bMarkOccurrencesMatchCase, bMarkOccurrencesMatchWords);
+      TEG_Settings.iMarkOccurrences = 1;
+      EditMarkAll(hwndEdit, TEG_Settings.iMarkOccurrences, TEG_Settings.bMarkOccurrencesMatchCase, TEG_Settings.bMarkOccurrencesMatchWords);
       break;
 
     case IDM_VIEW_MARKOCCURRENCES_GREEN:
-      iMarkOccurrences = 2;
-      EditMarkAll(hwndEdit, iMarkOccurrences, bMarkOccurrencesMatchCase, bMarkOccurrencesMatchWords);
+      TEG_Settings.iMarkOccurrences = 2;
+      EditMarkAll(hwndEdit, TEG_Settings.iMarkOccurrences, TEG_Settings.bMarkOccurrencesMatchCase, TEG_Settings.bMarkOccurrencesMatchWords);
       break;
 
     case IDM_VIEW_MARKOCCURRENCES_BLUE:
-      iMarkOccurrences = 3;
-      EditMarkAll(hwndEdit, iMarkOccurrences, bMarkOccurrencesMatchCase, bMarkOccurrencesMatchWords);
+      TEG_Settings.iMarkOccurrences = 3;
+      EditMarkAll(hwndEdit, TEG_Settings.iMarkOccurrences, TEG_Settings.bMarkOccurrencesMatchCase, TEG_Settings.bMarkOccurrencesMatchWords);
       break;
 
     case IDM_VIEW_MARKOCCURRENCES_CASE:
-      bMarkOccurrencesMatchCase = (bMarkOccurrencesMatchCase) ? FALSE : TRUE;
-      EditMarkAll(hwndEdit, iMarkOccurrences, bMarkOccurrencesMatchCase, bMarkOccurrencesMatchWords);
+      TEG_Settings.bMarkOccurrencesMatchCase = (TEG_Settings.bMarkOccurrencesMatchCase) ? FALSE : TRUE;
+      EditMarkAll(hwndEdit, TEG_Settings.iMarkOccurrences, TEG_Settings.bMarkOccurrencesMatchCase, TEG_Settings.bMarkOccurrencesMatchWords);
       break;
 
     case IDM_VIEW_MARKOCCURRENCES_WORD:
-      bMarkOccurrencesMatchWords = (bMarkOccurrencesMatchWords) ? FALSE : TRUE;
-      EditMarkAll(hwndEdit, iMarkOccurrences, bMarkOccurrencesMatchCase, bMarkOccurrencesMatchWords);
+      TEG_Settings.bMarkOccurrencesMatchWords = (TEG_Settings.bMarkOccurrencesMatchWords) ? FALSE : TRUE;
+      EditMarkAll(hwndEdit, TEG_Settings.iMarkOccurrences, TEG_Settings.bMarkOccurrencesMatchCase, TEG_Settings.bMarkOccurrencesMatchWords);
       break;
 
     case IDM_VIEW_FOLDING:
-      bShowCodeFolding = (bShowCodeFolding) ? FALSE : TRUE;
-      SciCall_SetMarginWidth(MARGIN_FOLD_INDEX, (bShowCodeFolding) ? 11 : 0);
+      TEG_Settings.bShowCodeFolding = (TEG_Settings.bShowCodeFolding) ? FALSE : TRUE;
+      SciCall_SetMarginWidth(MARGIN_FOLD_INDEX, (TEG_Settings.bShowCodeFolding) ? 11 : 0);
       UpdateToolbar();
-      if (!bShowCodeFolding)
+      if (!TEG_Settings.bShowCodeFolding)
         FoldToggleAll(EXPAND);
       break;
 
@@ -3861,29 +3798,29 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
 
 
     case IDM_VIEW_SHOWWHITESPACE:
-      bViewWhiteSpace = (bViewWhiteSpace) ? FALSE : TRUE;
-      SendMessage(hwndEdit,SCI_SETVIEWWS,(bViewWhiteSpace)?SCWS_VISIBLEALWAYS:SCWS_INVISIBLE,0);
+      TEG_Settings.bViewWhiteSpace = (TEG_Settings.bViewWhiteSpace) ? FALSE : TRUE;
+      SendMessage(hwndEdit,SCI_SETVIEWWS,(TEG_Settings.bViewWhiteSpace)?SCWS_VISIBLEALWAYS:SCWS_INVISIBLE,0);
       break;
 
 
     case IDM_VIEW_SHOWEOLS:
-      bViewEOLs = (bViewEOLs) ? FALSE : TRUE;
-      SendMessage(hwndEdit,SCI_SETVIEWEOL,bViewEOLs,0);
+      TEG_Settings.bViewEOLs = (TEG_Settings.bViewEOLs) ? FALSE : TRUE;
+      SendMessage(hwndEdit,SCI_SETVIEWEOL,TEG_Settings.bViewEOLs,0);
       break;
 
 
     case IDM_VIEW_WORDWRAPSYMBOLS:
-      bShowWordWrapSymbols = (bShowWordWrapSymbols) ? 0 : 1;
-      if (bShowWordWrapSymbols) {
+        TEG_Settings.bShowWordWrapSymbols = (TEG_Settings.bShowWordWrapSymbols) ? 0 : 1;
+      if (TEG_Settings.bShowWordWrapSymbols) {
         int wrapVisualFlags = 0;
         int wrapVisualFlagsLocation = 0;
-        if (iWordWrapSymbols == 0)
-          iWordWrapSymbols = 22;
-        switch (iWordWrapSymbols%10) {
+        if (TEG_Settings.iWordWrapSymbols == 0)
+            TEG_Settings.iWordWrapSymbols = 22;
+        switch (TEG_Settings.iWordWrapSymbols%10) {
           case 1: wrapVisualFlags |= SC_WRAPVISUALFLAG_END; wrapVisualFlagsLocation |= SC_WRAPVISUALFLAGLOC_END_BY_TEXT; break;
           case 2: wrapVisualFlags |= SC_WRAPVISUALFLAG_END; break;
         }
-        switch (((iWordWrapSymbols%100)-(iWordWrapSymbols%10))/10) {
+        switch (((TEG_Settings.iWordWrapSymbols%100)-(TEG_Settings.iWordWrapSymbols%10))/10) {
           case 1: wrapVisualFlags |= SC_WRAPVISUALFLAG_START; wrapVisualFlagsLocation |= SC_WRAPVISUALFLAGLOC_START_BY_TEXT; break;
           case 2: wrapVisualFlags |= SC_WRAPVISUALFLAG_START; break;
         }
@@ -3897,8 +3834,8 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
 
 
     case IDM_VIEW_MATCHBRACES:
-      bMatchBraces = (bMatchBraces) ? FALSE : TRUE;
-      if (bMatchBraces) {
+        TEG_Settings.bMatchBraces = (TEG_Settings.bMatchBraces) ? FALSE : TRUE;
+      if (TEG_Settings.bMatchBraces) {
         struct SCNotification scn;
         scn.nmhdr.hwndFrom = hwndEdit;
         scn.nmhdr.idFrom = IDC_EDIT;
@@ -3912,12 +3849,12 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
 
 
     case IDM_VIEW_AUTOCLOSETAGS:
-      bAutoCloseTags = (bAutoCloseTags) ? FALSE : TRUE;
+        TEG_Settings.bAutoCloseTags = (TEG_Settings.bAutoCloseTags) ? FALSE : TRUE;
       break;
 
 
     case IDM_VIEW_HILITECURRENTLINE:
-      bHiliteCurrentLine = (bHiliteCurrentLine) ? FALSE : TRUE;
+        TEG_Settings.bHiliteCurrentLine = (TEG_Settings.bHiliteCurrentLine) ? FALSE : TRUE;
       Style_SetCurrentLineBackground(hwndEdit);
       break;
 
@@ -3941,12 +3878,12 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
 
 
     case IDM_VIEW_TOOLBAR:
-      if (bShowToolbar) {
-        bShowToolbar = 0;
+      if (TEG_Settings.bShowToolbar) {
+        TEG_Settings.bShowToolbar = 0;
         ShowWindow(hwndReBar,SW_HIDE);
       }
       else {
-        bShowToolbar = 1;
+        TEG_Settings.bShowToolbar = 1;
         UpdateToolbar();
         ShowWindow(hwndReBar,SW_SHOW);
       }
@@ -3960,12 +3897,12 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
 
 
     case IDM_VIEW_STATUSBAR:
-      if (bShowStatusbar) {
-        bShowStatusbar = 0;
+      if (TEG_Settings.bShowStatusbar) {
+        TEG_Settings.bShowStatusbar = 0;
         ShowWindow(hwndStatus,SW_HIDE);
       }
       else {
-        bShowStatusbar = 1;
+        TEG_Settings.bShowStatusbar = 1;
         UpdateStatusbar();
         ShowWindow(hwndStatus,SW_SHOW);
       }
@@ -4033,13 +3970,13 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
 
 
     case IDM_VIEW_ALWAYSONTOP:
-      if ((bAlwaysOnTop || flagAlwaysOnTop == 2) && flagAlwaysOnTop != 1) {
-        bAlwaysOnTop = 0;
+      if ((TEG_Settings.bAlwaysOnTop || flagAlwaysOnTop == 2) && flagAlwaysOnTop != 1) {
+        TEG_Settings.bAlwaysOnTop = 0;
         flagAlwaysOnTop = 0;
         SetWindowPos(hwnd,HWND_NOTOPMOST,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE);
       }
       else {
-        bAlwaysOnTop = 1;
+        TEG_Settings.bAlwaysOnTop = 1;
         flagAlwaysOnTop = 0;
         SetWindowPos(hwnd,HWND_TOPMOST,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE);
       }
@@ -4047,39 +3984,39 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
 
 
     case IDM_VIEW_MINTOTRAY:
-      bMinimizeToTray =(bMinimizeToTray) ? FALSE : TRUE;
+      TEG_Settings.bMinimizeToTray =(TEG_Settings.bMinimizeToTray) ? FALSE : TRUE;
       break;
 
 
     case IDM_VIEW_TRANSPARENT:
-      bTransparentMode =(bTransparentMode) ? FALSE : TRUE;
-      SetWindowTransparentMode(hwnd,bTransparentMode);
+      TEG_Settings.bTransparentMode =(TEG_Settings.bTransparentMode) ? FALSE : TRUE;
+      SetWindowTransparentMode(hwnd,TEG_Settings.bTransparentMode);
       break;
 
 
     case IDM_VIEW_SHOWFILENAMEONLY:
-      iPathNameFormat = 0;
+        TEG_Settings.iPathNameFormat = 0;
       lstrcpy(szTitleExcerpt,L"");
       SetWindowTitle(hwnd,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
-        iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
+          TEG_Settings.iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
         IDS_READONLY,bReadOnly,szTitleExcerpt);
       break;
 
 
     case IDM_VIEW_SHOWFILENAMEFIRST:
-      iPathNameFormat = 1;
+        TEG_Settings.iPathNameFormat = 1;
       lstrcpy(szTitleExcerpt,L"");
       SetWindowTitle(hwnd,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
-        iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
+          TEG_Settings.iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
         IDS_READONLY,bReadOnly,szTitleExcerpt);
       break;
 
 
     case IDM_VIEW_SHOWFULLPATH:
-      iPathNameFormat = 2;
+        TEG_Settings.iPathNameFormat = 2;
       lstrcpy(szTitleExcerpt,L"");
       SetWindowTitle(hwnd,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
-        iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
+          TEG_Settings.iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
         IDS_READONLY,bReadOnly,szTitleExcerpt);
       break;
 
@@ -4087,23 +4024,23 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
     case IDM_VIEW_SHOWEXCERPT:
       EditGetExcerpt(hwndEdit,szTitleExcerpt,COUNTOF(szTitleExcerpt));
       SetWindowTitle(hwnd,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
-        iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
+          TEG_Settings.iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
         IDS_READONLY,bReadOnly,szTitleExcerpt);
       break;
 
 
     case IDM_VIEW_NOSAVERECENT:
-      bSaveRecentFiles = (bSaveRecentFiles) ? FALSE : TRUE;
+        TEG_Settings.bSaveRecentFiles = (TEG_Settings.bSaveRecentFiles) ? FALSE : TRUE;
       break;
 
 
     case IDM_VIEW_NOSAVEFINDREPL:
-      bSaveFindReplace = (bSaveFindReplace) ? FALSE : TRUE;
+        TEG_Settings.bSaveFindReplace = (TEG_Settings.bSaveFindReplace) ? FALSE : TRUE;
       break;
 
 
     case IDM_VIEW_SAVEBEFORERUNNINGTOOLS:
-      bSaveBeforeRunningTools = (bSaveBeforeRunningTools) ? FALSE : TRUE;
+      TEG_Settings.bSaveBeforeRunningTools = (TEG_Settings.bSaveBeforeRunningTools) ? FALSE : TRUE;
       break;
 
 
@@ -4114,22 +4051,22 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
 
 
     case IDM_VIEW_NOESCFUNC:
-      iEscFunction = 0;
+      TEG_Settings.iEscFunction = 0;
       break;
 
 
     case IDM_VIEW_ESCMINIMIZE:
-      iEscFunction = 1;
+      TEG_Settings.iEscFunction = 1;
       break;
 
 
     case IDM_VIEW_ESCEXIT:
-      iEscFunction = 2;
+      TEG_Settings.iEscFunction = 2;
       break;
 
 
     case IDM_VIEW_SAVESETTINGS:
-      bSaveSettings = (bSaveSettings) ? FALSE : TRUE;
+        TEG_Settings.bSaveSettings = (TEG_Settings.bSaveSettings) ? FALSE : TRUE;
       break;
 
 
@@ -4192,9 +4129,9 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
       //close the autocomplete box
       SendMessage(hwndEdit,SCI_AUTOCCANCEL,0, 0);
 
-      if (iEscFunction == 1)
+      if (TEG_Settings.iEscFunction == 1)
         SendMessage(hwnd,WM_SYSCOMMAND,SC_MINIMIZE,0);
-      else if (iEscFunction == 2)
+      else if (TEG_Settings.iEscFunction == 2)
         SendMessage(hwnd,WM_CLOSE,0,0);
       break;
 
@@ -4207,9 +4144,9 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
 
     // Newline with toggled auto indent setting
     case CMD_CTRLENTER:
-      bAutoIndent = (bAutoIndent) ? 0 : 1;
+        TEG_Settings.bAutoIndent = (TEG_Settings.bAutoIndent) ? 0 : 1;
       SendMessage(hwndEdit,SCI_NEWLINE,0,0);
-      bAutoIndent = (bAutoIndent) ? 0 : 1;
+      TEG_Settings.bAutoIndent = (TEG_Settings.bAutoIndent) ? 0 : 1;
       break;
 
 
@@ -4268,14 +4205,14 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
       {
         WCHAR tchCurFile2[MAX_PATH];
         if (lstrlen(szCurFile)) {
-          if (iDefaultEncoding == CPI_UNICODEBOM)
+          if (TEG_Settings.iDefaultEncoding == CPI_UNICODEBOM)
             iSrcEncoding = CPI_UNICODE;
-          else if (iDefaultEncoding == CPI_UNICODEBEBOM)
+          else if (TEG_Settings.iDefaultEncoding == CPI_UNICODEBEBOM)
             iSrcEncoding = CPI_UNICODEBE;
-          else if (iDefaultEncoding == CPI_UTF8SIGN)
+          else if (TEG_Settings.iDefaultEncoding == CPI_UTF8SIGN)
             iSrcEncoding = CPI_UTF8;
           else
-            iSrcEncoding = iDefaultEncoding;
+            iSrcEncoding = TEG_Settings.iDefaultEncoding;
           lstrcpy(tchCurFile2,szCurFile);
           FileLoad(FALSE,FALSE,TRUE,FALSE,tchCurFile2);
         }
@@ -4310,12 +4247,12 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
     case CMD_RELOADASCIIASUTF8:
       {
         WCHAR tchCurFile2[MAX_PATH];
-        BOOL _bLoadASCIIasUTF8 = bLoadASCIIasUTF8;
+        BOOL _bLoadASCIIasUTF8 = TEG_Settings.bLoadASCIIasUTF8;
         if (lstrlen(szCurFile)) {
-          bLoadASCIIasUTF8 = 1;
+            TEG_Settings.bLoadASCIIasUTF8 = 1;
           lstrcpy(tchCurFile2,szCurFile);
           FileLoad(FALSE,FALSE,TRUE,FALSE,tchCurFile2);
-          bLoadASCIIasUTF8 = _bLoadASCIIasUTF8;
+          TEG_Settings.bLoadASCIIasUTF8 = _bLoadASCIIasUTF8;
         }
       }
       break;
@@ -4326,13 +4263,13 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
         WCHAR tchCurFile2[MAX_PATH];
         if (lstrlen(szCurFile)) {
           int _fNoFileVariables = fNoFileVariables;
-          BOOL _bNoEncodingTags = bNoEncodingTags;
+          BOOL _bNoEncodingTags = TEG_Settings.bNoEncodingTags;
           fNoFileVariables = 1;
-          bNoEncodingTags = 1;
+          TEG_Settings.bNoEncodingTags = 1;
           lstrcpy(tchCurFile2,szCurFile);
           FileLoad(FALSE,FALSE,TRUE,FALSE,tchCurFile2);
           fNoFileVariables = _fNoFileVariables;
-          bNoEncodingTags = _bNoEncodingTags;
+          TEG_Settings.bNoEncodingTags = _bNoEncodingTags;
         }
       }
       break;
@@ -4553,7 +4490,7 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
 
     case CMD_INCLINELIMIT:
     case CMD_DECLINELIMIT:
-      if (!bMarkLongLines)
+      if (!TEG_Settings.bMarkLongLines)
         SendMessage(hwnd,WM_COMMAND,MAKELONG(IDM_VIEW_LONGLINEMARKER,1),0);
       else {
         if (LOWORD(wParam) == CMD_INCLINELIMIT)
@@ -4563,7 +4500,7 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
         iLongLinesLimit = max(min(iLongLinesLimit,4096),0);
         SendMessage(hwndEdit,SCI_SETEDGECOLUMN,iLongLinesLimit,0);
         UpdateStatusbar();
-        iLongLinesLimitG = iLongLinesLimit;
+        TEG_Settings.iLongLinesLimitG = iLongLinesLimit;
       }
       break;
 
@@ -4611,7 +4548,7 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
     case CMD_TOGGLETITLE:
       EditGetExcerpt(hwndEdit,szTitleExcerpt,COUNTOF(szTitleExcerpt));
       SetWindowTitle(hwnd,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
-        iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
+          TEG_Settings.iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
         IDS_READONLY,bReadOnly,szTitleExcerpt);
       break;
 
@@ -4951,14 +4888,10 @@ LRESULT MsgNotify(HWND hwnd,WPARAM wParam,LPARAM lParam)
             }
 
             // mark occurrences of text currently selected
-            EditMarkAll(hwndEdit, iMarkOccurrences, bMarkOccurrencesMatchCase, bMarkOccurrencesMatchWords);
+            EditMarkAll(hwndEdit, TEG_Settings.iMarkOccurrences, TEG_Settings.bMarkOccurrencesMatchCase, TEG_Settings.bMarkOccurrencesMatchWords);
 
             // Brace Match
-            if (bMatchBraces)
-            {
-              int iPos;
-              char c;
-
+            if (TEG_Settings.bMatchBraces){
               int iEndStyled = (int)SendMessage(hwndEdit,SCI_GETENDSTYLED,0,0);
               if (iEndStyled < (int)SendMessage(hwndEdit,SCI_GETLENGTH,0,0)) {
                 int iLine = (int)SendMessage(hwndEdit,SCI_LINEFROMPOSITION,iEndStyled,0);
@@ -4966,8 +4899,8 @@ LRESULT MsgNotify(HWND hwnd,WPARAM wParam,LPARAM lParam)
                 SendMessage(hwndEdit,SCI_COLOURISE,iEndStyled,-1);
               }
 
-              iPos = (int)SendMessage(hwndEdit,SCI_GETCURRENTPOS,0,0);
-              c = (char)SendMessage(hwndEdit,SCI_GETCHARAT,iPos,0);
+              int iPos = (int)SendMessage(hwndEdit,SCI_GETCURRENTPOS,0,0);
+              char c = (char)SendMessage(hwndEdit,SCI_GETCHARAT,iPos,0);
               if (StrChrA("()[]{}",c)) {
                 int iBrace2 = (int)SendMessage(hwndEdit,SCI_BRACEMATCH,iPos,0);
                 if (iBrace2 != -1) {
@@ -5010,7 +4943,7 @@ LRESULT MsgNotify(HWND hwnd,WPARAM wParam,LPARAM lParam)
 
         case SCN_CHARADDED:
           // Auto indent
-          if (bAutoIndent && (scn->ch == '\x0D' || scn->ch == '\x0A'))
+          if (TEG_Settings.bAutoIndent && (scn->ch == '\x0D' || scn->ch == '\x0A'))
           {
             // in CRLF mode handle LF only...
             if ((SC_EOL_CRLF == iEOLMode && scn->ch != '\x0A') || SC_EOL_CRLF != iEOLMode)
@@ -5085,7 +5018,7 @@ LRESULT MsgNotify(HWND hwnd,WPARAM wParam,LPARAM lParam)
             }
           }
           // Auto close tags
-          else if (bAutoCloseTags && scn->ch == '>')
+          else if (TEG_Settings.bAutoCloseTags && scn->ch == '>')
           {
             //int iLexer = (int)SendMessage(hwndEdit,SCI_GETLEXER,0,0);
             if (/*iLexer == SCLEX_HTML || iLexer == SCLEX_XML*/ 1)
@@ -5142,7 +5075,7 @@ LRESULT MsgNotify(HWND hwnd,WPARAM wParam,LPARAM lParam)
               }
             }
           }
-          else if (bAutoCompleteWords && !SendMessage(hwndEdit, SCI_AUTOCACTIVE, 0, 0))
+          else if (TEG_Settings.bAutoCompleteWords && !SendMessage(hwndEdit, SCI_AUTOCACTIVE, 0, 0))
             CompleteWord(hwndEdit, FALSE);
           break;
 
@@ -5154,7 +5087,7 @@ LRESULT MsgNotify(HWND hwnd,WPARAM wParam,LPARAM lParam)
         case SCN_SAVEPOINTREACHED:
           bModified = FALSE;
           SetWindowTitle(hwnd,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
-            iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
+              TEG_Settings.iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
             IDS_READONLY,bReadOnly,szTitleExcerpt);
           break;
 
@@ -5171,7 +5104,7 @@ LRESULT MsgNotify(HWND hwnd,WPARAM wParam,LPARAM lParam)
         case SCN_SAVEPOINTLEFT:
           bModified = TRUE;
           SetWindowTitle(hwnd,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
-            iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
+              TEG_Settings.iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
             IDS_READONLY,bReadOnly,szTitleExcerpt);
           break;
       }
@@ -5312,7 +5245,6 @@ LRESULT MsgNotify(HWND hwnd,WPARAM wParam,LPARAM lParam)
 
 }
 
-
 //=============================================================================
 //
 //  LoadSettings()
@@ -5325,17 +5257,14 @@ void LoadSettings()
 
   LoadIniSection(L"Settings",pIniSection,cchIniSection);
 
-  bSaveSettings =
-    IniSectionGetInt(pIniSection,L"SaveSettings",1);
-  if (bSaveSettings) bSaveSettings = 1;
+  TEG_Settings.bSaveSettings = IniSectionGetInt(pIniSection,L"SaveSettings",1);
+  if (TEG_Settings.bSaveSettings) TEG_Settings.bSaveSettings = 1;
 
-  bSaveRecentFiles =
-    IniSectionGetInt(pIniSection,L"SaveRecentFiles",0);
-  if (bSaveRecentFiles) bSaveRecentFiles = 1;
+  TEG_Settings.bSaveRecentFiles = IniSectionGetInt(pIniSection,L"SaveRecentFiles",0);
+  if (TEG_Settings.bSaveRecentFiles) TEG_Settings.bSaveRecentFiles = 1;
 
-  bSaveFindReplace =
-    IniSectionGetInt(pIniSection,L"SaveFindReplace",0);
-  if (bSaveFindReplace) bSaveFindReplace = 1;
+  TEG_Settings.bSaveFindReplace = IniSectionGetInt(pIniSection,L"SaveFindReplace",0);
+  if (TEG_Settings.bSaveFindReplace) TEG_Settings.bSaveFindReplace = 1;
 
   efrData.bFindClose = IniSectionGetInt(pIniSection,L"CloseFind",0);
   if (efrData.bFindClose) efrData.bReplaceClose = TRUE;
@@ -5358,206 +5287,206 @@ void LoadSettings()
   else
     PathAbsoluteFromApp(tchFavoritesDir,NULL,COUNTOF(tchFavoritesDir),TRUE);
 
-  iPathNameFormat = IniSectionGetInt(pIniSection,L"PathNameFormat",0);
-  iPathNameFormat = max(min(iPathNameFormat,2),0);
+  TEG_Settings.iPathNameFormat = IniSectionGetInt(pIniSection,L"PathNameFormat",0);
+  TEG_Settings.iPathNameFormat = max(min(TEG_Settings.iPathNameFormat,2),0);
 
   fWordWrap = IniSectionGetInt(pIniSection,L"WordWrap",0);
   if (fWordWrap) fWordWrap = 1;
-  fWordWrapG = fWordWrap;
+  TEG_Settings.fWordWrapG = fWordWrap;
 
-  iWordWrapMode = IniSectionGetInt(pIniSection,L"WordWrapMode",0);
-  iWordWrapMode = max(min(iWordWrapMode,1),0);
+  TEG_Settings.iWordWrapMode = IniSectionGetInt(pIniSection,L"WordWrapMode",0);
+  TEG_Settings.iWordWrapMode = max(min(TEG_Settings.iWordWrapMode,1),0);
 
-  iWordWrapIndent = IniSectionGetInt(pIniSection,L"WordWrapIndent",0);
-  iWordWrapIndent = max(min(iWordWrapIndent,6),0);
+  TEG_Settings.iWordWrapIndent = IniSectionGetInt(pIniSection,L"WordWrapIndent",0);
+  TEG_Settings.iWordWrapIndent = max(min(TEG_Settings.iWordWrapIndent,6),0);
 
-  iWordWrapSymbols = IniSectionGetInt(pIniSection,L"WordWrapSymbols",22);
-  iWordWrapSymbols = max(min(iWordWrapSymbols%10,2),0)+max(min((iWordWrapSymbols%100-iWordWrapSymbols%10)/10,2),0)*10;
+  TEG_Settings.iWordWrapSymbols = IniSectionGetInt(pIniSection,L"WordWrapSymbols",22);
+  TEG_Settings.iWordWrapSymbols = max(min(TEG_Settings.iWordWrapSymbols%10,2),0)+max(min((TEG_Settings.iWordWrapSymbols%100- TEG_Settings.iWordWrapSymbols%10)/10,2),0)*10;
 
-  bShowWordWrapSymbols = IniSectionGetInt(pIniSection,L"ShowWordWrapSymbols",0);
-  if (bShowWordWrapSymbols) bShowWordWrapSymbols = 1;
+  TEG_Settings.bShowWordWrapSymbols = IniSectionGetInt(pIniSection,L"ShowWordWrapSymbols",0);
+  if (TEG_Settings.bShowWordWrapSymbols) TEG_Settings.bShowWordWrapSymbols = 1;
 
-  bMatchBraces = IniSectionGetInt(pIniSection,L"MatchBraces",1);
-  if (bMatchBraces) bMatchBraces = 1;
+  TEG_Settings.bMatchBraces = IniSectionGetInt(pIniSection,L"MatchBraces",1);
+  if (TEG_Settings.bMatchBraces) TEG_Settings.bMatchBraces = 1;
 
-  bAutoCloseTags = IniSectionGetInt(pIniSection,L"AutoCloseTags",0);
-  if (bAutoCloseTags) bAutoCloseTags = 1;
+  TEG_Settings.bAutoCloseTags = IniSectionGetInt(pIniSection,L"AutoCloseTags",0);
+  if (TEG_Settings.bAutoCloseTags) TEG_Settings.bAutoCloseTags = 1;
 
-  bHiliteCurrentLine = IniSectionGetInt(pIniSection,L"HighlightCurrentLine",0);
-  if (bHiliteCurrentLine) bHiliteCurrentLine = 1;
+  TEG_Settings.bHiliteCurrentLine = IniSectionGetInt(pIniSection,L"HighlightCurrentLine",0);
+  if (TEG_Settings.bHiliteCurrentLine) TEG_Settings.bHiliteCurrentLine = 1;
 
-  bAutoIndent = IniSectionGetInt(pIniSection,L"AutoIndent",1);
-  if (bAutoIndent) bAutoIndent = 1;
+  TEG_Settings.bAutoIndent = IniSectionGetInt(pIniSection,L"AutoIndent",1);
+  if (TEG_Settings.bAutoIndent) TEG_Settings.bAutoIndent = 1;
 
-  bAutoCompleteWords = IniSectionGetInt(pIniSection,L"AutoCompleteWords",0);
-  if (bAutoCompleteWords) bAutoCompleteWords = 1;
+  TEG_Settings.bAutoCompleteWords = IniSectionGetInt(pIniSection,L"AutoCompleteWords",0);
+  if (TEG_Settings.bAutoCompleteWords) TEG_Settings.bAutoCompleteWords = 1;
 
-  bShowIndentGuides = IniSectionGetInt(pIniSection,L"ShowIndentGuides",0);
-  if (bShowIndentGuides) bShowIndentGuides = 1;
+  TEG_Settings.bShowIndentGuides = IniSectionGetInt(pIniSection,L"ShowIndentGuides",0);
+  if (TEG_Settings.bShowIndentGuides) TEG_Settings.bShowIndentGuides = 1;
 
   bTabsAsSpaces = IniSectionGetInt(pIniSection,L"TabsAsSpaces",1);
   if (bTabsAsSpaces) bTabsAsSpaces = 1;
-  bTabsAsSpacesG = bTabsAsSpaces;
+  TEG_Settings.bTabsAsSpacesG = bTabsAsSpaces;
 
   bTabIndents = IniSectionGetInt(pIniSection,L"TabIndents",1);
   if (bTabIndents) bTabIndents = 1;
-  bTabIndentsG = bTabIndents;
+  TEG_Settings.bTabIndentsG = bTabIndents;
 
-  bBackspaceUnindents = IniSectionGetInt(pIniSection,L"BackspaceUnindents",0);
-  if (bBackspaceUnindents) bBackspaceUnindents = 1;
+  TEG_Settings.bBackspaceUnindents = IniSectionGetInt(pIniSection,L"BackspaceUnindents",0);
+  if (TEG_Settings.bBackspaceUnindents) TEG_Settings.bBackspaceUnindents = 1;
 
   iTabWidth = IniSectionGetInt(pIniSection,L"TabWidth",2);
   iTabWidth = max(min(iTabWidth,256),1);
-  iTabWidthG = iTabWidth;
+  TEG_Settings.iTabWidthG = iTabWidth;
 
   iIndentWidth = IniSectionGetInt(pIniSection,L"IndentWidth",0);
   iIndentWidth = max(min(iIndentWidth,256),0);
-  iIndentWidthG = iIndentWidth;
+  TEG_Settings.iIndentWidthG = iIndentWidth;
 
-  bMarkLongLines = IniSectionGetInt(pIniSection,L"MarkLongLines",0);
-  if (bMarkLongLines) bMarkLongLines = 1;
+  TEG_Settings.bMarkLongLines = IniSectionGetInt(pIniSection,L"MarkLongLines",0);
+  if (TEG_Settings.bMarkLongLines) TEG_Settings.bMarkLongLines = 1;
 
   iLongLinesLimit = IniSectionGetInt(pIniSection,L"LongLinesLimit",72);
   iLongLinesLimit = max(min(iLongLinesLimit,4096),0);
-  iLongLinesLimitG = iLongLinesLimit;
+  TEG_Settings.iLongLinesLimitG = iLongLinesLimit;
 
-  iLongLineMode = IniSectionGetInt(pIniSection,L"LongLineMode",EDGE_LINE);
-  iLongLineMode = max(min(iLongLineMode,EDGE_BACKGROUND),EDGE_LINE);
+  TEG_Settings.iLongLineMode = IniSectionGetInt(pIniSection,L"LongLineMode",EDGE_LINE);
+  TEG_Settings.iLongLineMode = max(min(TEG_Settings.iLongLineMode,EDGE_BACKGROUND),EDGE_LINE);
 
-  bShowSelectionMargin = IniSectionGetInt(pIniSection,L"ShowSelectionMargin",0);
-  if (bShowSelectionMargin) bShowSelectionMargin = 1;
+  TEG_Settings.bShowSelectionMargin = IniSectionGetInt(pIniSection,L"ShowSelectionMargin",0);
+  if (TEG_Settings.bShowSelectionMargin) TEG_Settings.bShowSelectionMargin = 1;
 
-  bShowLineNumbers = IniSectionGetInt(pIniSection,L"ShowLineNumbers",1);
-  if (bShowLineNumbers) bShowLineNumbers = 1;
+  TEG_Settings.bShowLineNumbers = IniSectionGetInt(pIniSection,L"ShowLineNumbers",1);
+  if (TEG_Settings.bShowLineNumbers) TEG_Settings.bShowLineNumbers = 1;
 
-  bShowCodeFolding = IniSectionGetInt(pIniSection,L"ShowCodeFolding",1);
-  if (bShowCodeFolding) bShowCodeFolding = 1;
+  TEG_Settings.bShowCodeFolding = IniSectionGetInt(pIniSection,L"ShowCodeFolding",1);
+  if (TEG_Settings.bShowCodeFolding) TEG_Settings.bShowCodeFolding = 1;
 
-  iMarkOccurrences = IniSectionGetInt(pIniSection,L"MarkOccurrences",3);
-  bMarkOccurrencesMatchCase = IniSectionGetInt(pIniSection,L"MarkOccurrencesMatchCase",0);
-  bMarkOccurrencesMatchWords = IniSectionGetInt(pIniSection,L"MarkOccurrencesMatchWholeWords",1);
+  TEG_Settings.iMarkOccurrences = IniSectionGetInt(pIniSection,L"MarkOccurrences",3);
+  TEG_Settings.bMarkOccurrencesMatchCase = IniSectionGetInt(pIniSection,L"MarkOccurrencesMatchCase",0);
+  TEG_Settings.bMarkOccurrencesMatchWords = IniSectionGetInt(pIniSection,L"MarkOccurrencesMatchWholeWords",1);
 
-  bViewWhiteSpace = IniSectionGetInt(pIniSection,L"ViewWhiteSpace",0);
-  if (bViewWhiteSpace) bViewWhiteSpace = 1;
+  TEG_Settings.bViewWhiteSpace = IniSectionGetInt(pIniSection,L"ViewWhiteSpace",0);
+  if (TEG_Settings.bViewWhiteSpace) TEG_Settings.bViewWhiteSpace = 1;
 
-  bViewEOLs = IniSectionGetInt(pIniSection,L"ViewEOLs",0);
-  if (bViewEOLs) bViewEOLs = 1;
+  TEG_Settings.bViewEOLs = IniSectionGetInt(pIniSection,L"ViewEOLs",0);
+  if (TEG_Settings.bViewEOLs) TEG_Settings.bViewEOLs = 1;
 
-  iDefaultEncoding = IniSectionGetInt(pIniSection,L"DefaultEncoding",0);
-  iDefaultEncoding = Encoding_MapIniSetting(TRUE,iDefaultEncoding);
-  if (!Encoding_IsValid(iDefaultEncoding)) iDefaultEncoding = CPI_UTF8;
+  TEG_Settings.iDefaultEncoding = IniSectionGetInt(pIniSection,L"DefaultEncoding",0);
+  TEG_Settings.iDefaultEncoding = Encoding_MapIniSetting(TRUE,TEG_Settings.iDefaultEncoding);
+  if (!Encoding_IsValid(TEG_Settings.iDefaultEncoding)) TEG_Settings.iDefaultEncoding = CPI_UTF8;
 
-  bSkipUnicodeDetection = IniSectionGetInt(pIniSection,L"SkipUnicodeDetection",0);
-  if (bSkipUnicodeDetection) bSkipUnicodeDetection = 1;
+  TEG_Settings.bSkipUnicodeDetection = IniSectionGetInt(pIniSection,L"SkipUnicodeDetection",0);
+  if (TEG_Settings.bSkipUnicodeDetection) TEG_Settings.bSkipUnicodeDetection = 1;
 
-  bLoadASCIIasUTF8 = IniSectionGetInt(pIniSection,L"LoadASCIIasUTF8",0);
-  if (bLoadASCIIasUTF8) bLoadASCIIasUTF8 = 1;
+  TEG_Settings.bLoadASCIIasUTF8 = IniSectionGetInt(pIniSection,L"LoadASCIIasUTF8",0);
+  if (TEG_Settings.bLoadASCIIasUTF8) TEG_Settings.bLoadASCIIasUTF8 = 1;
 
-  bLoadNFOasOEM = IniSectionGetInt(pIniSection,L"LoadNFOasOEM",1);
-  if (bLoadNFOasOEM) bLoadNFOasOEM = 1;
+  TEG_Settings.bLoadNFOasOEM = IniSectionGetInt(pIniSection,L"LoadNFOasOEM",1);
+  if (TEG_Settings.bLoadNFOasOEM) TEG_Settings.bLoadNFOasOEM = 1;
 
-  bNoEncodingTags = IniSectionGetInt(pIniSection,L"NoEncodingTags",0);
-  if (bNoEncodingTags) bNoEncodingTags = 1;
+  TEG_Settings.bNoEncodingTags = IniSectionGetInt(pIniSection,L"NoEncodingTags",0);
+  if (TEG_Settings.bNoEncodingTags) TEG_Settings.bNoEncodingTags = 1;
 
-  iDefaultEOLMode = IniSectionGetInt(pIniSection,L"DefaultEOLMode",0);
-  iDefaultEOLMode = max(min(iDefaultEOLMode,2),0);
+  TEG_Settings.iDefaultEOLMode = IniSectionGetInt(pIniSection,L"DefaultEOLMode",0);
+  TEG_Settings.iDefaultEOLMode = max(min(TEG_Settings.iDefaultEOLMode,2),0);
 
-  bFixLineEndings = IniSectionGetInt(pIniSection,L"FixLineEndings",1);
-  if (bFixLineEndings) bFixLineEndings = 1;
+  TEG_Settings.bFixLineEndings = IniSectionGetInt(pIniSection,L"FixLineEndings",1);
+  if (TEG_Settings.bFixLineEndings) TEG_Settings.bFixLineEndings = 1;
 
-  bAutoStripBlanks = IniSectionGetInt(pIniSection,L"FixTrailingBlanks",0);
-  if (bAutoStripBlanks) bAutoStripBlanks = 1;
+  TEG_Settings.bAutoStripBlanks = IniSectionGetInt(pIniSection,L"FixTrailingBlanks",0);
+  if (TEG_Settings.bAutoStripBlanks) TEG_Settings.bAutoStripBlanks = 1;
 
-  iPrintHeader = IniSectionGetInt(pIniSection,L"PrintHeader",1);
-  iPrintHeader = max(min(iPrintHeader,3),0);
+  TEG_Settings.iPrintHeader = IniSectionGetInt(pIniSection,L"PrintHeader",1);
+  TEG_Settings.iPrintHeader = max(min(TEG_Settings.iPrintHeader,3),0);
 
-  iPrintFooter = IniSectionGetInt(pIniSection,L"PrintFooter",0);
-  iPrintFooter = max(min(iPrintFooter,1),0);
+  TEG_Settings.iPrintFooter = IniSectionGetInt(pIniSection,L"PrintFooter",0);
+  TEG_Settings.iPrintFooter = max(min(TEG_Settings.iPrintFooter,1),0);
 
-  iPrintColor = IniSectionGetInt(pIniSection,L"PrintColorMode",3);
-  iPrintColor = max(min(iPrintColor,4),0);
+  TEG_Settings.iPrintColor = IniSectionGetInt(pIniSection,L"PrintColorMode",3);
+  TEG_Settings.iPrintColor = max(min(TEG_Settings.iPrintColor,4),0);
 
-  iPrintZoom = IniSectionGetInt(pIniSection,L"PrintZoom",10)-10;
-  iPrintZoom = max(min(iPrintZoom,20),-10);
+  TEG_Settings.iPrintZoom = IniSectionGetInt(pIniSection,L"PrintZoom",10)-10;
+  TEG_Settings.iPrintZoom = max(min(TEG_Settings.iPrintZoom,20),-10);
 
-  pagesetupMargin.left = IniSectionGetInt(pIniSection,L"PrintMarginLeft",-1);
-  pagesetupMargin.left = max(pagesetupMargin.left,-1);
+  TEG_Settings.pagesetupMargin.left = IniSectionGetInt(pIniSection,L"PrintMarginLeft",-1);
+  TEG_Settings.pagesetupMargin.left = max(TEG_Settings.pagesetupMargin.left,-1);
 
-  pagesetupMargin.top = IniSectionGetInt(pIniSection,L"PrintMarginTop",-1);
-  pagesetupMargin.top = max(pagesetupMargin.top,-1);
+  TEG_Settings.pagesetupMargin.top = IniSectionGetInt(pIniSection,L"PrintMarginTop",-1);
+  TEG_Settings.pagesetupMargin.top = max(TEG_Settings.pagesetupMargin.top,-1);
 
-  pagesetupMargin.right = IniSectionGetInt(pIniSection,L"PrintMarginRight",-1);
-  pagesetupMargin.right = max(pagesetupMargin.right,-1);
+  TEG_Settings.pagesetupMargin.right = IniSectionGetInt(pIniSection,L"PrintMarginRight",-1);
+  TEG_Settings.pagesetupMargin.right = max(TEG_Settings.pagesetupMargin.right,-1);
 
-  pagesetupMargin.bottom = IniSectionGetInt(pIniSection,L"PrintMarginBottom",-1);
-  pagesetupMargin.bottom = max(pagesetupMargin.bottom,-1);
+  TEG_Settings.pagesetupMargin.bottom = IniSectionGetInt(pIniSection,L"PrintMarginBottom",-1);
+  TEG_Settings.pagesetupMargin.bottom = max(TEG_Settings.pagesetupMargin.bottom,-1);
 
-  bSaveBeforeRunningTools = IniSectionGetInt(pIniSection,L"SaveBeforeRunningTools",0);
-  if (bSaveBeforeRunningTools) bSaveBeforeRunningTools = 1;
+  TEG_Settings.bSaveBeforeRunningTools = IniSectionGetInt(pIniSection,L"SaveBeforeRunningTools",0);
+  if (TEG_Settings.bSaveBeforeRunningTools) TEG_Settings.bSaveBeforeRunningTools = 1;
 
-  iFileWatchingMode = IniSectionGetInt(pIniSection,L"FileWatchingMode",0);
-  iFileWatchingMode = max(min(iFileWatchingMode,2),0);
+  TEG_Settings.iFileWatchingMode = IniSectionGetInt(pIniSection,L"FileWatchingMode",0);
+  TEG_Settings.iFileWatchingMode = max(min(TEG_Settings.iFileWatchingMode,2),0);
 
-  bResetFileWatching = IniSectionGetInt(pIniSection,L"ResetFileWatching",1);
-  if (bResetFileWatching) bResetFileWatching = 1;
+  TEG_Settings.bResetFileWatching = IniSectionGetInt(pIniSection,L"ResetFileWatching",1);
+  if (TEG_Settings.bResetFileWatching) TEG_Settings.bResetFileWatching = 1;
 
-  iEscFunction = IniSectionGetInt(pIniSection,L"EscFunction",0);
-  iEscFunction = max(min(iEscFunction,2),0);
+  TEG_Settings.iEscFunction = IniSectionGetInt(pIniSection,L"EscFunction",0);
+  TEG_Settings.iEscFunction = max(min(TEG_Settings.iEscFunction,2),0);
 
-  bAlwaysOnTop = IniSectionGetInt(pIniSection,L"AlwaysOnTop",0);
-  if (bAlwaysOnTop) bAlwaysOnTop = 1;
+  TEG_Settings.bAlwaysOnTop = IniSectionGetInt(pIniSection,L"AlwaysOnTop",0);
+  if (TEG_Settings.bAlwaysOnTop) TEG_Settings.bAlwaysOnTop = 1;
 
-  bMinimizeToTray = IniSectionGetInt(pIniSection,L"MinimizeToTray",0);
-  if (bMinimizeToTray) bMinimizeToTray = 1;
+  TEG_Settings.bMinimizeToTray = IniSectionGetInt(pIniSection,L"MinimizeToTray",0);
+  if (TEG_Settings.bMinimizeToTray) TEG_Settings.bMinimizeToTray = 1;
 
-  bTransparentMode = IniSectionGetInt(pIniSection,L"TransparentMode",0);
-  if (bTransparentMode) bTransparentMode = 1;
+  TEG_Settings.bTransparentMode = IniSectionGetInt(pIniSection,L"TransparentMode",0);
+  if (TEG_Settings.bTransparentMode) TEG_Settings.bTransparentMode = 1;
 
   // Check if SetLayeredWindowAttributes() is available
   bTransparentModeAvailable =
     (GetProcAddress(GetModuleHandle(L"User32"),"SetLayeredWindowAttributes") != NULL);
 
   IniSectionGetString(pIniSection,L"ToolbarButtons",L"",
-    tchToolbarButtons,COUNTOF(tchToolbarButtons));
+    TEG_Settings.tchToolbarButtons,COUNTOF(TEG_Settings.tchToolbarButtons));
 
-  bShowToolbar = IniSectionGetInt(pIniSection,L"ShowToolbar",1);
-  if (bShowToolbar) bShowToolbar = 1;
+  TEG_Settings.bShowToolbar = IniSectionGetInt(pIniSection,L"ShowToolbar",1);
+  if (TEG_Settings.bShowToolbar) TEG_Settings.bShowToolbar = 1;
 
-  bShowStatusbar = IniSectionGetInt(pIniSection,L"ShowStatusbar",1);
-  if (bShowStatusbar) bShowStatusbar = 1;
+  TEG_Settings.bShowStatusbar = IniSectionGetInt(pIniSection,L"ShowStatusbar",1);
+  if (TEG_Settings.bShowStatusbar) TEG_Settings.bShowStatusbar = 1;
 
-  cxEncodingDlg = IniSectionGetInt(pIniSection,L"EncodingDlgSizeX",256);
-  cxEncodingDlg = max(cxEncodingDlg,0);
+  TEG_Settings.cxEncodingDlg = IniSectionGetInt(pIniSection,L"EncodingDlgSizeX",256);
+  TEG_Settings.cxEncodingDlg = max(TEG_Settings.cxEncodingDlg,0);
 
-  cyEncodingDlg = IniSectionGetInt(pIniSection,L"EncodingDlgSizeY",262);
-  cyEncodingDlg = max(cyEncodingDlg,0);
+  TEG_Settings.cyEncodingDlg = IniSectionGetInt(pIniSection,L"EncodingDlgSizeY",262);
+  TEG_Settings.cyEncodingDlg = max(TEG_Settings.cyEncodingDlg,0);
 
-  cxRecodeDlg = IniSectionGetInt(pIniSection,L"RecodeDlgSizeX",256);
-  cxRecodeDlg = max(cxRecodeDlg,0);
+  TEG_Settings.cxRecodeDlg = IniSectionGetInt(pIniSection,L"RecodeDlgSizeX",256);
+  TEG_Settings.cxRecodeDlg = max(TEG_Settings.cxRecodeDlg,0);
 
-  cyRecodeDlg = IniSectionGetInt(pIniSection,L"RecodeDlgSizeY",262);
-  cyRecodeDlg = max(cyRecodeDlg,0);
+  TEG_Settings.cyRecodeDlg = IniSectionGetInt(pIniSection,L"RecodeDlgSizeY",262);
+  TEG_Settings.cyRecodeDlg = max(TEG_Settings.cyRecodeDlg,0);
 
-  cxFileMRUDlg = IniSectionGetInt(pIniSection,L"FileMRUDlgSizeX",412);
-  cxFileMRUDlg = max(cxFileMRUDlg,0);
+  TEG_Settings.cxFileMRUDlg = IniSectionGetInt(pIniSection,L"FileMRUDlgSizeX",412);
+  TEG_Settings.cxFileMRUDlg = max(TEG_Settings.cxFileMRUDlg,0);
 
-  cyFileMRUDlg = IniSectionGetInt(pIniSection,L"FileMRUDlgSizeY",376);
-  cyFileMRUDlg = max(cyFileMRUDlg,0);
+  TEG_Settings.cyFileMRUDlg = IniSectionGetInt(pIniSection,L"FileMRUDlgSizeY",376);
+  TEG_Settings.cyFileMRUDlg = max(TEG_Settings.cyFileMRUDlg,0);
 
-  cxOpenWithDlg = IniSectionGetInt(pIniSection,L"OpenWithDlgSizeX",384);
-  cxOpenWithDlg = max(cxOpenWithDlg,0);
+  TEG_Settings.cxOpenWithDlg = IniSectionGetInt(pIniSection,L"OpenWithDlgSizeX",384);
+  TEG_Settings.cxOpenWithDlg = max(TEG_Settings.cxOpenWithDlg,0);
 
-  cyOpenWithDlg = IniSectionGetInt(pIniSection,L"OpenWithDlgSizeY",386);
-  cyOpenWithDlg = max(cyOpenWithDlg,0);
+  TEG_Settings.cyOpenWithDlg = IniSectionGetInt(pIniSection,L"OpenWithDlgSizeY",386);
+  TEG_Settings.cyOpenWithDlg = max(TEG_Settings.cyOpenWithDlg,0);
 
-  cxFavoritesDlg = IniSectionGetInt(pIniSection,L"FavoritesDlgSizeX",334);
-  cxFavoritesDlg = max(cxFavoritesDlg,0);
+  TEG_Settings.cxFavoritesDlg = IniSectionGetInt(pIniSection,L"FavoritesDlgSizeX",334);
+  TEG_Settings.cxFavoritesDlg = max(TEG_Settings.cxFavoritesDlg,0);
 
-  cyFavoritesDlg = IniSectionGetInt(pIniSection,L"FavoritesDlgSizeY",316);
-  cyFavoritesDlg = max(cyFavoritesDlg,0);
+  TEG_Settings.cyFavoritesDlg = IniSectionGetInt(pIniSection,L"FavoritesDlgSizeY",316);
+  TEG_Settings.cyFavoritesDlg = max(TEG_Settings.cyFavoritesDlg,0);
 
-  xFindReplaceDlg = IniSectionGetInt(pIniSection,L"FindReplaceDlgPosX",0);
-  yFindReplaceDlg = IniSectionGetInt(pIniSection,L"FindReplaceDlgPosY",0);
+  TEG_Settings.xFindReplaceDlg = IniSectionGetInt(pIniSection,L"FindReplaceDlgPosX",0);
+  TEG_Settings.yFindReplaceDlg = IniSectionGetInt(pIniSection,L"FindReplaceDlgPosY",0);
 
   LoadIniSection(L"Settings2",pIniSection,cchIniSection);
 
@@ -5630,7 +5559,6 @@ void LoadSettings()
 
 }
 
-
 //=============================================================================
 //
 //  SaveSettings()
@@ -5648,91 +5576,95 @@ void SaveSettings(BOOL bSaveSettingsNow)
 
   CreateIniFile();
 
-  if (!bSaveSettings && !bSaveSettingsNow) {
-    IniSetInt(L"Settings",L"SaveSettings",bSaveSettings);
+  if (!TEG_Settings.bSaveSettings && !bSaveSettingsNow) {
+    IniSetInt(L"Settings",L"SaveSettings", TEG_Settings.bSaveSettings);
     return;
   }
 
   pIniSection = LocalAlloc(LPTR,sizeof(WCHAR)*32*1024);
   cchIniSection = (int)LocalSize(pIniSection)/sizeof(WCHAR);
 
-  IniSectionSetInt(pIniSection,L"SaveSettings",bSaveSettings);
-  IniSectionSetInt(pIniSection,L"SaveRecentFiles",bSaveRecentFiles);
-  IniSectionSetInt(pIniSection,L"SaveFindReplace",bSaveFindReplace);
+  IniSectionSetInt(pIniSection,L"SaveSettings", TEG_Settings.bSaveSettings);
+  IniSectionSetInt(pIniSection,L"SaveRecentFiles", TEG_Settings.bSaveRecentFiles);
+  IniSectionSetInt(pIniSection,L"SaveFindReplace", TEG_Settings.bSaveFindReplace);
+
   IniSectionSetInt(pIniSection,L"CloseFind",efrData.bFindClose);
   IniSectionSetInt(pIniSection,L"CloseReplace",efrData.bReplaceClose);
   IniSectionSetInt(pIniSection,L"NoFindWrap",efrData.bNoFindWrap);
+
   PathRelativeToApp(tchOpenWithDir,wchTmp,COUNTOF(wchTmp),FALSE,TRUE,flagPortableMyDocs);
   IniSectionSetString(pIniSection,L"OpenWithDir",wchTmp);
   PathRelativeToApp(tchFavoritesDir,wchTmp,COUNTOF(wchTmp),FALSE,TRUE,flagPortableMyDocs);
   IniSectionSetString(pIniSection,L"Favorites",wchTmp);
-  IniSectionSetInt(pIniSection,L"PathNameFormat",iPathNameFormat);
-  IniSectionSetInt(pIniSection,L"WordWrap",fWordWrapG);
-  IniSectionSetInt(pIniSection,L"WordWrapMode",iWordWrapMode);
-  IniSectionSetInt(pIniSection,L"WordWrapIndent",iWordWrapIndent);
-  IniSectionSetInt(pIniSection,L"WordWrapSymbols",iWordWrapSymbols);
-  IniSectionSetInt(pIniSection,L"ShowWordWrapSymbols",bShowWordWrapSymbols);
-  IniSectionSetInt(pIniSection,L"MatchBraces",bMatchBraces);
-  IniSectionSetInt(pIniSection,L"AutoCloseTags",bAutoCloseTags);
-  IniSectionSetInt(pIniSection,L"HighlightCurrentLine",bHiliteCurrentLine);
-  IniSectionSetInt(pIniSection,L"AutoIndent",bAutoIndent);
-  IniSectionSetInt(pIniSection,L"AutoCompleteWords",bAutoCompleteWords);
-  IniSectionSetInt(pIniSection,L"ShowIndentGuides",bShowIndentGuides);
-  IniSectionSetInt(pIniSection,L"TabsAsSpaces",bTabsAsSpacesG);
-  IniSectionSetInt(pIniSection,L"TabIndents",bTabIndentsG);
-  IniSectionSetInt(pIniSection,L"BackspaceUnindents",bBackspaceUnindents);
-  IniSectionSetInt(pIniSection,L"TabWidth",iTabWidthG);
-  IniSectionSetInt(pIniSection,L"IndentWidth",iIndentWidthG);
-  IniSectionSetInt(pIniSection,L"MarkLongLines",bMarkLongLines);
-  IniSectionSetInt(pIniSection,L"LongLinesLimit",iLongLinesLimitG);
-  IniSectionSetInt(pIniSection,L"LongLineMode",iLongLineMode);
-  IniSectionSetInt(pIniSection,L"ShowSelectionMargin",bShowSelectionMargin);
-  IniSectionSetInt(pIniSection,L"ShowLineNumbers",bShowLineNumbers);
-  IniSectionSetInt(pIniSection,L"ShowCodeFolding",bShowCodeFolding);
-  IniSectionSetInt(pIniSection,L"MarkOccurrences",iMarkOccurrences);
-  IniSectionSetInt(pIniSection,L"MarkOccurrencesMatchCase",bMarkOccurrencesMatchCase);
-  IniSectionSetInt(pIniSection,L"MarkOccurrencesMatchWholeWords",bMarkOccurrencesMatchWords);
-  IniSectionSetInt(pIniSection,L"ViewWhiteSpace",bViewWhiteSpace);
-  IniSectionSetInt(pIniSection,L"ViewEOLs",bViewEOLs);
-  IniSectionSetInt(pIniSection,L"DefaultEncoding",Encoding_MapIniSetting(FALSE,iDefaultEncoding));
-  IniSectionSetInt(pIniSection,L"SkipUnicodeDetection",bSkipUnicodeDetection);
-  IniSectionSetInt(pIniSection,L"LoadASCIIasUTF8",bLoadASCIIasUTF8);
-  IniSectionSetInt(pIniSection,L"LoadNFOasOEM",bLoadNFOasOEM);
-  IniSectionSetInt(pIniSection,L"NoEncodingTags",bNoEncodingTags);
-  IniSectionSetInt(pIniSection,L"DefaultEOLMode",iDefaultEOLMode);
-  IniSectionSetInt(pIniSection,L"FixLineEndings",bFixLineEndings);
-  IniSectionSetInt(pIniSection,L"FixTrailingBlanks",bAutoStripBlanks);
-  IniSectionSetInt(pIniSection,L"PrintHeader",iPrintHeader);
-  IniSectionSetInt(pIniSection,L"PrintFooter",iPrintFooter);
-  IniSectionSetInt(pIniSection,L"PrintColorMode",iPrintColor);
-  IniSectionSetInt(pIniSection,L"PrintZoom",iPrintZoom+10);
-  IniSectionSetInt(pIniSection,L"PrintMarginLeft",pagesetupMargin.left);
-  IniSectionSetInt(pIniSection,L"PrintMarginTop",pagesetupMargin.top);
-  IniSectionSetInt(pIniSection,L"PrintMarginRight",pagesetupMargin.right);
-  IniSectionSetInt(pIniSection,L"PrintMarginBottom",pagesetupMargin.bottom);
-  IniSectionSetInt(pIniSection,L"SaveBeforeRunningTools",bSaveBeforeRunningTools);
-  IniSectionSetInt(pIniSection,L"FileWatchingMode",iFileWatchingMode);
-  IniSectionSetInt(pIniSection,L"ResetFileWatching",bResetFileWatching);
-  IniSectionSetInt(pIniSection,L"EscFunction",iEscFunction);
-  IniSectionSetInt(pIniSection,L"AlwaysOnTop",bAlwaysOnTop);
-  IniSectionSetInt(pIniSection,L"MinimizeToTray",bMinimizeToTray);
-  IniSectionSetInt(pIniSection,L"TransparentMode",bTransparentMode);
-  Toolbar_GetButtons(hwndToolbar,IDT_FILE_NEW,tchToolbarButtons,COUNTOF(tchToolbarButtons));
-  IniSectionSetString(pIniSection,L"ToolbarButtons",tchToolbarButtons);
-  IniSectionSetInt(pIniSection,L"ShowToolbar",bShowToolbar);
-  IniSectionSetInt(pIniSection,L"ShowStatusbar",bShowStatusbar);
-  IniSectionSetInt(pIniSection,L"EncodingDlgSizeX",cxEncodingDlg);
-  IniSectionSetInt(pIniSection,L"EncodingDlgSizeY",cyEncodingDlg);
-  IniSectionSetInt(pIniSection,L"RecodeDlgSizeX",cxRecodeDlg);
-  IniSectionSetInt(pIniSection,L"RecodeDlgSizeY",cyRecodeDlg);
-  IniSectionSetInt(pIniSection,L"FileMRUDlgSizeX",cxFileMRUDlg);
-  IniSectionSetInt(pIniSection,L"FileMRUDlgSizeY",cyFileMRUDlg);
-  IniSectionSetInt(pIniSection,L"OpenWithDlgSizeX",cxOpenWithDlg);
-  IniSectionSetInt(pIniSection,L"OpenWithDlgSizeY",cyOpenWithDlg);
-  IniSectionSetInt(pIniSection,L"FavoritesDlgSizeX",cxFavoritesDlg);
-  IniSectionSetInt(pIniSection,L"FavoritesDlgSizeY",cyFavoritesDlg);
-  IniSectionSetInt(pIniSection,L"FindReplaceDlgPosX",xFindReplaceDlg);
-  IniSectionSetInt(pIniSection,L"FindReplaceDlgPosY",yFindReplaceDlg);
+
+  IniSectionSetInt(pIniSection,L"PathNameFormat", TEG_Settings.iPathNameFormat);
+  IniSectionSetInt(pIniSection,L"WordWrap", TEG_Settings.fWordWrapG);
+  IniSectionSetInt(pIniSection,L"WordWrapMode", TEG_Settings.iWordWrapMode);
+  IniSectionSetInt(pIniSection,L"WordWrapIndent", TEG_Settings.iWordWrapIndent);
+  IniSectionSetInt(pIniSection,L"WordWrapSymbols", TEG_Settings.iWordWrapSymbols);
+  IniSectionSetInt(pIniSection,L"ShowWordWrapSymbols", TEG_Settings.bShowWordWrapSymbols);
+  IniSectionSetInt(pIniSection,L"MatchBraces", TEG_Settings.bMatchBraces);
+  IniSectionSetInt(pIniSection,L"AutoCloseTags", TEG_Settings.bAutoCloseTags);
+  IniSectionSetInt(pIniSection,L"HighlightCurrentLine", TEG_Settings.bHiliteCurrentLine);
+  IniSectionSetInt(pIniSection,L"AutoIndent", TEG_Settings.bAutoIndent);
+  IniSectionSetInt(pIniSection,L"AutoCompleteWords", TEG_Settings.bAutoCompleteWords);
+
+  IniSectionSetInt(pIniSection,L"ShowIndentGuides",TEG_Settings.bShowIndentGuides);
+  IniSectionSetInt(pIniSection,L"TabsAsSpaces",TEG_Settings.bTabsAsSpacesG);
+  IniSectionSetInt(pIniSection,L"TabIndents",TEG_Settings.bTabIndentsG);
+  IniSectionSetInt(pIniSection,L"BackspaceUnindents",TEG_Settings.bBackspaceUnindents);
+  IniSectionSetInt(pIniSection,L"TabWidth",TEG_Settings.iTabWidthG);
+  IniSectionSetInt(pIniSection,L"IndentWidth",TEG_Settings.iIndentWidthG);
+  IniSectionSetInt(pIniSection,L"MarkLongLines",TEG_Settings.bMarkLongLines);
+  IniSectionSetInt(pIniSection,L"LongLinesLimit",TEG_Settings.iLongLinesLimitG);
+  IniSectionSetInt(pIniSection,L"LongLineMode",TEG_Settings.iLongLineMode);
+  IniSectionSetInt(pIniSection,L"ShowSelectionMargin",TEG_Settings.bShowSelectionMargin);
+  IniSectionSetInt(pIniSection,L"ShowLineNumbers",TEG_Settings.bShowLineNumbers);
+  IniSectionSetInt(pIniSection,L"ShowCodeFolding",TEG_Settings.bShowCodeFolding);
+  IniSectionSetInt(pIniSection,L"MarkOccurrences",TEG_Settings.iMarkOccurrences);
+  IniSectionSetInt(pIniSection,L"MarkOccurrencesMatchCase",TEG_Settings.bMarkOccurrencesMatchCase);
+  IniSectionSetInt(pIniSection,L"MarkOccurrencesMatchWholeWords",TEG_Settings.bMarkOccurrencesMatchWords);
+  IniSectionSetInt(pIniSection,L"ViewWhiteSpace",TEG_Settings.bViewWhiteSpace);
+  IniSectionSetInt(pIniSection,L"ViewEOLs",TEG_Settings.bViewEOLs);
+  IniSectionSetInt(pIniSection,L"DefaultEncoding",Encoding_MapIniSetting(FALSE,TEG_Settings.iDefaultEncoding));
+  IniSectionSetInt(pIniSection,L"SkipUnicodeDetection",TEG_Settings.bSkipUnicodeDetection);
+  IniSectionSetInt(pIniSection,L"LoadASCIIasUTF8",TEG_Settings.bLoadASCIIasUTF8);
+  IniSectionSetInt(pIniSection,L"LoadNFOasOEM",TEG_Settings.bLoadNFOasOEM);
+  IniSectionSetInt(pIniSection,L"NoEncodingTags",TEG_Settings.bNoEncodingTags);
+  IniSectionSetInt(pIniSection,L"DefaultEOLMode",TEG_Settings.iDefaultEOLMode);
+  IniSectionSetInt(pIniSection,L"FixLineEndings",TEG_Settings.bFixLineEndings);
+  IniSectionSetInt(pIniSection,L"FixTrailingBlanks",TEG_Settings.bAutoStripBlanks);
+  IniSectionSetInt(pIniSection,L"PrintHeader",TEG_Settings.iPrintHeader);
+  IniSectionSetInt(pIniSection,L"PrintFooter",TEG_Settings.iPrintFooter);
+  IniSectionSetInt(pIniSection,L"PrintColorMode",TEG_Settings.iPrintColor);
+  IniSectionSetInt(pIniSection,L"PrintZoom",TEG_Settings.iPrintZoom+10);
+  IniSectionSetInt(pIniSection,L"PrintMarginLeft",TEG_Settings.pagesetupMargin.left);
+  IniSectionSetInt(pIniSection,L"PrintMarginTop",TEG_Settings.pagesetupMargin.top);
+  IniSectionSetInt(pIniSection,L"PrintMarginRight",TEG_Settings.pagesetupMargin.right);
+  IniSectionSetInt(pIniSection,L"PrintMarginBottom",TEG_Settings.pagesetupMargin.bottom);
+  IniSectionSetInt(pIniSection,L"SaveBeforeRunningTools",TEG_Settings.bSaveBeforeRunningTools);
+  IniSectionSetInt(pIniSection,L"FileWatchingMode",TEG_Settings.iFileWatchingMode);
+  IniSectionSetInt(pIniSection,L"ResetFileWatching",TEG_Settings.bResetFileWatching);
+  IniSectionSetInt(pIniSection,L"EscFunction",TEG_Settings.iEscFunction);
+  IniSectionSetInt(pIniSection,L"AlwaysOnTop",TEG_Settings.bAlwaysOnTop);
+  IniSectionSetInt(pIniSection,L"MinimizeToTray",TEG_Settings.bMinimizeToTray);
+  IniSectionSetInt(pIniSection,L"TransparentMode",TEG_Settings.bTransparentMode);
+  Toolbar_GetButtons(hwndToolbar,IDT_FILE_NEW,TEG_Settings.tchToolbarButtons,COUNTOF(TEG_Settings.tchToolbarButtons));
+  IniSectionSetString(pIniSection,L"ToolbarButtons",TEG_Settings.tchToolbarButtons);
+  IniSectionSetInt(pIniSection,L"ShowToolbar",TEG_Settings.bShowToolbar);
+  IniSectionSetInt(pIniSection,L"ShowStatusbar",TEG_Settings.bShowStatusbar);
+  IniSectionSetInt(pIniSection,L"EncodingDlgSizeX",TEG_Settings.cxEncodingDlg);
+  IniSectionSetInt(pIniSection,L"EncodingDlgSizeY",TEG_Settings.cyEncodingDlg);
+  IniSectionSetInt(pIniSection,L"RecodeDlgSizeX",TEG_Settings.cxRecodeDlg);
+  IniSectionSetInt(pIniSection,L"RecodeDlgSizeY",TEG_Settings.cyRecodeDlg);
+  IniSectionSetInt(pIniSection,L"FileMRUDlgSizeX",TEG_Settings.cxFileMRUDlg);
+  IniSectionSetInt(pIniSection,L"FileMRUDlgSizeY",TEG_Settings.cyFileMRUDlg);
+  IniSectionSetInt(pIniSection,L"OpenWithDlgSizeX",TEG_Settings.cxOpenWithDlg);
+  IniSectionSetInt(pIniSection,L"OpenWithDlgSizeY",TEG_Settings.cyOpenWithDlg);
+  IniSectionSetInt(pIniSection,L"FavoritesDlgSizeX",TEG_Settings.cxFavoritesDlg);
+  IniSectionSetInt(pIniSection,L"FavoritesDlgSizeY",TEG_Settings.cyFavoritesDlg);
+  IniSectionSetInt(pIniSection,L"FindReplaceDlgPosX",TEG_Settings.xFindReplaceDlg);
+  IniSectionSetInt(pIniSection,L"FindReplaceDlgPosY",TEG_Settings.yFindReplaceDlg);
 
   SaveIniSection(L"Settings",pIniSection);
   LocalFree(pIniSection);
@@ -6436,7 +6368,7 @@ void UpdateToolbar()
 
   int i;
 
-  if (!bShowToolbar)
+  if (!TEG_Settings.bShowToolbar)
     return;
 
   EnableTool(IDT_FILE_ADDTOFAV,lstrlen(szCurFile));
@@ -6456,7 +6388,7 @@ void UpdateToolbar()
   EnableTool(IDT_EDIT_REPLACE,i /*&& !bReadOnly*/);
   EnableTool(IDT_EDIT_CLEAR,i /*&& !bReadOnly*/);
 
-  EnableTool(IDT_VIEW_TOGGLEFOLDS,i && bShowCodeFolding);
+  EnableTool(IDT_VIEW_TOGGLEFOLDS,i && TEG_Settings.bShowCodeFolding);
   EnableTool(IDT_FILE_LAUNCH,i);
 
   CheckTool(IDT_VIEW_WORDWRAP,fWordWrap);
@@ -6502,7 +6434,7 @@ void UpdateStatusbar()
     WCHAR tchLinesSelected[32];
 #endif
 
-  if (!bShowStatusbar)
+  if (!TEG_Settings.bShowStatusbar)
     return;
 
   iPos = (int)SendMessage(hwndEdit,SCI_GETCURRENTPOS,0,0);
@@ -6519,7 +6451,7 @@ void UpdateStatusbar()
   wsprintf(tchCol,L"%i",iCol);
   FormatNumberStr(tchCol);
 
-  if (bMarkLongLines) {
+  if (TEG_Settings.bMarkLongLines) {
     wsprintf(tchCols,L"%i",iLongLinesLimit);
     FormatNumberStr(tchCols);
   }
@@ -6545,14 +6477,14 @@ void UpdateStatusbar()
     wsprintf(tchLinesSelected,L"%i",iLinesSelected);
     FormatNumberStr(tchLinesSelected);
 
-    if (!bMarkLongLines)
+    if (!TEG_Settings.bMarkLongLines)
         FormatString(tchDocPos,COUNTOF(tchDocPos),IDS_DOCPOS,tchLn,tchLines,tchCol,tchSel,tchLinesSelected);
     else
         FormatString(tchDocPos,COUNTOF(tchDocPos),IDS_DOCPOS2,tchLn,tchLines,tchCol,tchCols,tchSel,tchLinesSelected);
 
 #else
 
-  if (!bMarkLongLines)
+  if (!TEG_Settings.bMarkLongLines)
     FormatString(tchDocPos,COUNTOF(tchDocPos),IDS_DOCPOS,tchLn,tchLines,tchCol,tchSel);
   else
     FormatString(tchDocPos,COUNTOF(tchDocPos),IDS_DOCPOS2,tchLn,tchLines,tchCol,tchCols,tchSel);
@@ -6602,7 +6534,7 @@ void UpdateLineNumberWidth()
   int  iLineMarginWidthNow;
   int  iLineMarginWidthFit;
 
-  if (bShowLineNumbers) {
+  if (TEG_Settings.bShowLineNumbers) {
 
     wsprintfA(tchLines,"_%i_",SendMessage(hwndEdit,SCI_GETLINECOUNT,0,0));
 
@@ -6690,19 +6622,19 @@ BOOL FileLoad(BOOL bDontSave,BOOL bNew,BOOL bReload,BOOL bNoEncDetect,LPCWSTR lp
     UpdateLineNumberWidth();
     bModified = FALSE;
     bReadOnly = FALSE;
-    iEOLMode = iLineEndings[iDefaultEOLMode];
-    SendMessage(hwndEdit,SCI_SETEOLMODE,iLineEndings[iDefaultEOLMode],0);
-    iEncoding = iDefaultEncoding;
-    iOriginalEncoding = iDefaultEncoding;
-    SendMessage(hwndEdit,SCI_SETCODEPAGE,(iDefaultEncoding == CPI_DEFAULT) ? iDefaultCodePage : SC_CP_UTF8,0);
+    iEOLMode = iLineEndings[TEG_Settings.iDefaultEOLMode];
+    SendMessage(hwndEdit,SCI_SETEOLMODE,iLineEndings[TEG_Settings.iDefaultEOLMode],0);
+    iEncoding = TEG_Settings.iDefaultEncoding;
+    iOriginalEncoding = TEG_Settings.iDefaultEncoding;
+    SendMessage(hwndEdit,SCI_SETCODEPAGE,(TEG_Settings.iDefaultEncoding == CPI_DEFAULT) ? iDefaultCodePage : SC_CP_UTF8,0);
     EditSetNewText(hwndEdit,"",0);
     SetWindowTitle(hwndMain,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
-      iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
+        TEG_Settings.iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
       IDS_READONLY,bReadOnly,szTitleExcerpt);
 
     // Terminate file watching
-    if (bResetFileWatching)
-      iFileWatchingMode = 0;
+    if (TEG_Settings.bResetFileWatching)
+      TEG_Settings.iFileWatchingMode = 0;
     InstallFileWatching(NULL);
 
     return TRUE;
@@ -6750,15 +6682,15 @@ BOOL FileLoad(BOOL bDontSave,BOOL bNew,BOOL bReload,BOOL bNoEncDetect,LPCWSTR lp
         FileVars_Init(NULL,0,&fvCurFile);
         EditSetNewText(hwndEdit,"",0);
         Style_SetLexer(hwndEdit,NULL);
-        iEOLMode = iLineEndings[iDefaultEOLMode];
-        SendMessage(hwndEdit,SCI_SETEOLMODE,iLineEndings[iDefaultEOLMode],0);
+        iEOLMode = iLineEndings[TEG_Settings.iDefaultEOLMode];
+        SendMessage(hwndEdit,SCI_SETEOLMODE,iLineEndings[TEG_Settings.iDefaultEOLMode],0);
         if (iSrcEncoding != -1) {
           iEncoding = iSrcEncoding;
           iOriginalEncoding = iSrcEncoding;
         }
         else {
-          iEncoding = iDefaultEncoding;
-          iOriginalEncoding = iDefaultEncoding;
+          iEncoding = TEG_Settings.iDefaultEncoding;
+          iOriginalEncoding = TEG_Settings.iDefaultEncoding;
         }
         SendMessage(hwndEdit,SCI_SETCODEPAGE,(iEncoding == CPI_DEFAULT) ? iDefaultCodePage : SC_CP_UTF8,0);
         bReadOnly = FALSE;
@@ -6789,12 +6721,12 @@ BOOL FileLoad(BOOL bDontSave,BOOL bNew,BOOL bReload,BOOL bNoEncDetect,LPCWSTR lp
     if (flagUseSystemMRU == 2)
       SHAddToRecentDocs(SHARD_PATHW,szFileName);
     SetWindowTitle(hwndMain,uidsAppTitle,fIsElevated,IDS_UNTITLED,szFileName,
-      iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
+        TEG_Settings.iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
       IDS_READONLY,bReadOnly,szTitleExcerpt);
 
     // Install watching of the current file
-    if (!bReload && bResetFileWatching)
-      iFileWatchingMode = 0;
+    if (!bReload && TEG_Settings.bResetFileWatching)
+      TEG_Settings.iFileWatchingMode = 0;
     InstallFileWatching(szCurFile);
 
     // the .LOG feature ...
@@ -6879,7 +6811,7 @@ BOOL FileSave(BOOL bSaveAlways,BOOL bAsk,BOOL bSaveAs,BOOL bSaveCopy)
       bReadOnly = (dwFileAttributes & FILE_ATTRIBUTE_READONLY);
     if (bReadOnly) {
       SetWindowTitle(hwndMain,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
-        iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
+          TEG_Settings.iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
         IDS_READONLY,bReadOnly,szTitleExcerpt);
       if (MsgBox(MBYESNOWARN,IDS_READONLY_SAVE,szCurFile) == IDYES)
         bSaveAs = TRUE;
@@ -6938,12 +6870,12 @@ BOOL FileSave(BOOL bSaveAlways,BOOL bAsk,BOOL bSaveAs,BOOL bSaveCopy)
       if (flagUseSystemMRU == 2)
         SHAddToRecentDocs(SHARD_PATHW,szCurFile);
       SetWindowTitle(hwndMain,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
-        iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
+          TEG_Settings.iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
         IDS_READONLY,bReadOnly,szTitleExcerpt);
 
       // Install watching of the current file
-      if (bSaveAs && bResetFileWatching)
-        iFileWatchingMode = 0;
+      if (bSaveAs && TEG_Settings.bResetFileWatching)
+        TEG_Settings.iFileWatchingMode = 0;
       InstallFileWatching(szCurFile);
     }
   }
@@ -6954,7 +6886,7 @@ BOOL FileSave(BOOL bSaveAlways,BOOL bAsk,BOOL bSaveAs,BOOL bSaveCopy)
       lstrcpy(tchFile,szCurFile);
 
     SetWindowTitle(hwndMain,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
-      iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
+        TEG_Settings.iPathNameFormat,bModified || iEncoding != iOriginalEncoding,
       IDS_READONLY,bReadOnly,szTitleExcerpt);
 
     MsgBox(MBWARN,IDS_ERR_SAVEFILE,tchFile);
@@ -7588,7 +7520,7 @@ void InstallFileWatching(LPCWSTR lpszFile)
   HANDLE hFind;
 
   // Terminate
-  if (!iFileWatchingMode || !lpszFile || lstrlen(lpszFile) == 0)
+  if (!TEG_Settings.iFileWatchingMode || !lpszFile || lstrlen(lpszFile) == 0)
   {
     if (bRunningWatch)
     {
@@ -7685,7 +7617,7 @@ void CALLBACK WatchTimerProc(HWND hwnd,UINT uMsg,UINT_PTR idEvent,DWORD dwTime)
           FindCloseChangeNotification(hChangeHandle);
           hChangeHandle = NULL;
         }
-        if (iFileWatchingMode == 2) {
+        if (TEG_Settings.iFileWatchingMode == 2) {
           bRunningWatch = TRUE; /* ! */
           dwChangeNotifyTime = GetTickCount();
         }
@@ -7715,8 +7647,8 @@ void CALLBACK PasteBoardTimer(HWND hwnd,UINT uMsg,UINT_PTR idEvent,DWORD dwTime)
 
     if (SendMessage(hwndEdit,SCI_CANPASTE,0,0)) {
 
-      BOOL bAutoIndent2 = bAutoIndent;
-      bAutoIndent = 0;
+      BOOL bAutoIndent2 = TEG_Settings.bAutoIndent;
+      TEG_Settings.bAutoIndent = 0;
       EditJumpTo(hwndEdit,-1,0);
       SendMessage(hwndEdit,SCI_BEGINUNDOACTION,0,0);
       if (SendMessage(hwndEdit,SCI_GETLENGTH,0,0) > 0)
@@ -7725,7 +7657,7 @@ void CALLBACK PasteBoardTimer(HWND hwnd,UINT uMsg,UINT_PTR idEvent,DWORD dwTime)
       SendMessage(hwndEdit,SCI_NEWLINE,0,0);
       SendMessage(hwndEdit,SCI_ENDUNDOACTION,0,0);
       EditEnsureSelectionVisible(hwndEdit);
-      bAutoIndent = bAutoIndent2;
+      TEG_Settings.bAutoIndent = bAutoIndent2;
     }
 
     dwLastCopyTime = 0;
