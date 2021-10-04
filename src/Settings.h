@@ -5,6 +5,7 @@ class Settings
 {
 public:
 	void load();
+	void loadFlags();
 
 private:
 	bool findIniFile();
@@ -15,8 +16,6 @@ private:
 	bool saveSettings(bool saveSettingsNow);
 	bool checkIniFile(std::wstring& file, const std::wstring& module);
 	bool checkIniFileRedirect(std::wstring& file, const std::wstring& module);
-
-	void ScintillaStyles_Save();
 
 	std::wstring _iniFile;
 	std::wstring _iniFile2;

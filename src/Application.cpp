@@ -3,9 +3,12 @@
 #include <commdlg.h>
 #include <shlwapi.h>
 
+#include "Config.h"
+
 #include "scintilla.h"
 #include "scilexer.h"
 #include "resource.h"
+
 
 static UINT16 uWinVer;
 extern "C" UINT16 g_uWinVer = 0;
@@ -41,8 +44,7 @@ extern "C" HWND InitInstance(HINSTANCE, LPSTR, int);
 //
 // Flags
 //
-extern "C" int flagPasteBoard = 0;
-extern "C" int flagDisplayHelp = 0;
+extern "C" T_FLAG FLAG;
 
 Application::Application()
 {
@@ -98,13 +100,14 @@ int Application::init()
     TestIniFile();
     CreateIniFile();
 
+    _settings.loadFlags();
     LoadFlags();
 
     // set AppUserModelID
     PrivateSetCurrentProcessExplicitAppUserModelID(g_wchAppUserModelID);
 
     // Command Line Help Dialog
-    if (flagDisplayHelp) {
+    if (FLAG.DisplayHelp) {
         DisplayCmdLineHelp(NULL);
         return -1;
     }
@@ -112,7 +115,7 @@ int Application::init()
     // Adapt window class name
     if (IsElevated())
         StrCat(wchWndClass, L"U");
-    if (flagPasteBoard)
+    if (FLAG.PasteBoard)
         StrCat(wchWndClass, L"B");
 
     // Relaunch with elevated privileges
@@ -147,30 +150,30 @@ int Application::init()
         return -1;
     }
 
-    HWND hwnd;
     //if (!(hwnd = InitInstance(hInstance, lpCmdLine, nCmdShow)))
-    if (!(hwnd = InitInstance(getInstanceWin(), (char*)"", 1))) {
-        return -1;
-    }
+    if (HWND hwnd = InitInstance(getInstanceWin(), (char*)"", 1)) {
+        
+        //_settings.load();
 
-    _settings.load();
+        HACCEL hAccMain = LoadAccelerators(getInstanceWin(), MAKEINTRESOURCE(IDR_MAINWND));
+        HACCEL hAccFindReplace = LoadAccelerators(getInstanceWin(), MAKEINTRESOURCE(IDR_ACCFINDREPLACE));
 
-    HACCEL hAccMain = LoadAccelerators(getInstanceWin(), MAKEINTRESOURCE(IDR_MAINWND));
-    HACCEL hAccFindReplace = LoadAccelerators(getInstanceWin(), MAKEINTRESOURCE(IDR_ACCFINDREPLACE));
+        MSG msg;
+        while (GetMessage(&msg, NULL, 0, 0))
+        {
+            if (IsWindow(hDlgFindReplace) && (msg.hwnd == hDlgFindReplace || IsChild(hDlgFindReplace, msg.hwnd)))
+                if (TranslateAccelerator(hDlgFindReplace, hAccFindReplace, &msg) || IsDialogMessage(hDlgFindReplace, &msg))
+                    continue;
 
-    MSG msg;
-    while (GetMessage(&msg, NULL, 0, 0))
-    {
-        if (IsWindow(hDlgFindReplace) && (msg.hwnd == hDlgFindReplace || IsChild(hDlgFindReplace, msg.hwnd)))
-            if (TranslateAccelerator(hDlgFindReplace, hAccFindReplace, &msg) || IsDialogMessage(hDlgFindReplace, &msg))
-                continue;
-
-        if (!TranslateAccelerator(hwnd, hAccMain, &msg)) {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
+            if (!TranslateAccelerator(hwnd, hAccMain, &msg)) {
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
+            }
         }
+        return msg.wParam;
     }
-    return msg.wParam;
+
+    return -1;
 }
 
 Application* Application::getInstance()

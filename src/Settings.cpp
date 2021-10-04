@@ -2,7 +2,7 @@
 #include "precheader.h"
 
 #include "Notepad2.h"
-//#include "Edit.h"
+#include "Config.h"
 
 extern "C" void ExpandEnvironmentStringsEx(LPWSTR lpSrc, DWORD dwSrc);
 extern "C" int  Encoding_MapIniSetting(BOOL, int);
@@ -41,15 +41,13 @@ extern "C" WININFO wi;
 extern "C" HWND  hwndMain;
 
 extern "C"  T_Settings TEG_Settings;
-extern "C" int flagPortableMyDocs;
 extern "C" WCHAR tchOpenWithDir[MAX_PATH];
 extern "C" WCHAR tchFavoritesDir[MAX_PATH];
 extern "C" EDITFINDREPLACE efrData;
+extern "C" T_FLAG FLAG;
 
 static auto fileNameSettings = L"Notepad2.ini";
 static auto fileNameSettings_JSON = L"Notepad2x.json";
-
-void loadIniSection(const std::wstring& section, std::wstring& out, const std::wstring& fileName);
 
 // encoding function
 std::string to_utf8(std::wstring& wide_string)
@@ -60,11 +58,20 @@ std::string to_utf8(std::wstring& wide_string)
 
 void Settings::load()
 {
-    saveSettings(true);
+    //saveSettings(true);
     //findIniFile();
     //testIniFile();
     //createIniFile();
-    //loadSettings();
+    loadSettings();
+}
+
+void Settings::loadFlags()
+{
+    using json = nlohmann::json;
+    std::ifstream iFile(fileNameSettings_JSON);
+
+    json jsonfile;;
+    iFile >> jsonfile;
 }
 
 bool Settings::findIniFile()
@@ -184,14 +191,6 @@ bool Settings::createIniFileEx(const std::wstring& file)
 
 bool Settings::loadSettings()
 {
-    std::wstring iniSection;
-    iniSection.resize(32 * 1024);
-
-    loadIniSection(L"Settings", iniSection, _iniFile);
-
-    //bSaveSettings = IniSectionGetInt(pIniSection, L"SaveSettings", 1);
-    //if (bSaveSettings) bSaveSettings = 1;
-
     return false;
 }
 
@@ -219,13 +218,13 @@ bool Settings::saveSettings(bool saveSettingsNow)
 
     {
         WCHAR wchTmp[MAX_PATH];
-        PathRelativeToApp(tchOpenWithDir, wchTmp, MAX_PATH, FALSE, TRUE, flagPortableMyDocs);
+        PathRelativeToApp(tchOpenWithDir, wchTmp, MAX_PATH, FALSE, TRUE, FLAG.PortableMyDocs);
         auto ws = std::wstring(wchTmp);
         settings["Settings"]["OpenWithDir"] = to_utf8(ws);
     }
     {
         WCHAR wchTmp[MAX_PATH];
-        PathRelativeToApp(tchFavoritesDir, wchTmp, MAX_PATH, FALSE, TRUE, flagPortableMyDocs);
+        PathRelativeToApp(tchFavoritesDir, wchTmp, MAX_PATH, FALSE, TRUE, FLAG.PortableMyDocs);
         auto ws = std::wstring(wchTmp);
         settings["Settings"]["Favorites"] = to_utf8(ws);
     }
@@ -303,8 +302,7 @@ bool Settings::saveSettings(bool saveSettingsNow)
     //jsonfile["Window"] = "bar";
     //jsonfile["Custom Colors"] = "bar";
 
-    if (saveSettingsNow)
-    {
+    if (saveSettingsNow){
         WINDOWPLACEMENT wndpl;
 
         //GetWindowPlacement
@@ -335,7 +333,8 @@ bool Settings::saveSettings(bool saveSettingsNow)
     
     jsonfile = settings;
 
-    ScintillaStyles_Save();
+    //ScintillaStyles_Save
+    // TODO
 
     std::ofstream file(fileNameSettings_JSON);
     file << std::setw(2) << jsonfile;
@@ -407,14 +406,4 @@ bool Settings::checkIniFileRedirect(std::wstring& file, const std::wstring& modu
         }
     }
     return false;
-}
-
-void Settings::ScintillaStyles_Save()
-{
-}
-
-void loadIniSection(const std::wstring& section, std::wstring& out, const std::wstring& fileName)
-{
-    out.resize(32 * 1024);
-    GetPrivateProfileSection(section.c_str(), out.data(), out.size(), fileName.c_str());
 }

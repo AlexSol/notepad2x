@@ -37,8 +37,10 @@
 #include "resource.h"
 #include "SciCall.h"
 
+#include "Config.h"
 
 extern T_Settings TEG_Settings;
+extern T_FLAG FLAG;
 
 extern HWND  hwndMain;
 extern HWND  hwndEdit;
@@ -6886,7 +6888,6 @@ BOOL EditSortDlg(HWND hwnd,int *piSortFlags)
 //
 //  FileVars_Init()
 //
-extern int fNoFileVariables;
 
 BOOL FileVars_Init(char *lpData,DWORD cbData,LPFILEVARS lpfv) {
 
@@ -6895,12 +6896,12 @@ BOOL FileVars_Init(char *lpData,DWORD cbData,LPFILEVARS lpfv) {
   BOOL bDisableFileVariables = FALSE;
 
   ZeroMemory(lpfv,sizeof(FILEVARS));
-  if ((fNoFileVariables && TEG_Settings.bNoEncodingTags) || !lpData || !cbData)
+  if ((FLAG.NoFileVariables && TEG_Settings.bNoEncodingTags) || !lpData || !cbData)
     return(TRUE);
 
   lstrcpynA(tch,lpData,min(cbData+1,COUNTOF(tch)));
 
-  if (!fNoFileVariables) {
+  if (!FLAG.NoFileVariables) {
     if (FileVars_ParseInt(tch,"enable-local-variables",&i) && (!i))
       bDisableFileVariables = TRUE;
 
@@ -6948,7 +6949,7 @@ BOOL FileVars_Init(char *lpData,DWORD cbData,LPFILEVARS lpfv) {
       lpfv->mask |= FV_ENCODING;
   }
 
-  if (!fNoFileVariables && !bDisableFileVariables) {
+  if (!FLAG.NoFileVariables && !bDisableFileVariables) {
     if (FileVars_ParseStr(tch,"mode",lpfv->tchMode,COUNTOF(lpfv->tchMode)))
       lpfv->mask |= FV_MODE;
   }
@@ -6957,7 +6958,7 @@ BOOL FileVars_Init(char *lpData,DWORD cbData,LPFILEVARS lpfv) {
 
     lstrcpynA(tch,lpData+cbData-COUNTOF(tch)+1,COUNTOF(tch));
 
-    if (!fNoFileVariables) {
+    if (!FLAG.NoFileVariables) {
       if (FileVars_ParseInt(tch,"enable-local-variables",&i) && (!i))
         bDisableFileVariables = TRUE;
 
@@ -7005,7 +7006,7 @@ BOOL FileVars_Init(char *lpData,DWORD cbData,LPFILEVARS lpfv) {
         lpfv->mask |= FV_ENCODING;
     }
 
-    if (!fNoFileVariables && !bDisableFileVariables) {
+    if (!FLAG.NoFileVariables && !bDisableFileVariables) {
       if (FileVars_ParseStr(tch,"mode",lpfv->tchMode,COUNTOF(lpfv->tchMode)))
         lpfv->mask |= FV_MODE;
     }

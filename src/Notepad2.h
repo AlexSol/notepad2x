@@ -29,16 +29,16 @@
 typedef struct np2params {
 
   int   flagFileSpecified;
-  int   flagChangeNotify;
-  int   flagLexerSpecified;
+  int   ChangeNotify;
+  int   LexerSpecified;
   int   iInitialLexer;
-  int   flagQuietCreate;
-  int   flagJumpTo;
+  int   QuietCreate;
+  int   JumpTo;
   int   iInitialLine;
   int   iInitialColumn;
   int   iSrcEncoding;
-  int   flagSetEncoding;
-  int   flagSetEOLMode;
+  int   SetEncoding;
+  int   SetEOLMode;
   int   flagTitleExcerpt;
   WCHAR wchData;
 
@@ -115,6 +115,7 @@ typedef struct {
     int     xFindReplaceDlg;
     int     yFindReplaceDlg;
 } T_Settings;
+
 
 
 //==== Toolbar Style ==========================================================

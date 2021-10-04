@@ -36,8 +36,10 @@
 #include "resource.h"
 #include "SciCall.h"
 
-extern int iEncoding;
+#include "Config.h"
 
+extern int iEncoding;
+extern T_FLAG FLAG;
 
 #define MULTI_STYLE(a,b,c,d) ((a)|(b<<8)|(c<<16)|(d<<24))
 
@@ -3365,8 +3367,6 @@ PEDITLEXER __fastcall Style_MatchLexer(LPCWSTR lpszMatch,BOOL bCheckNames)
 //
 //  Style_SetLexerFromFile()
 //
-extern int fNoHTMLGuess;
-extern int fNoCGIGuess;
 extern FILEVARS fvCurFile;
 
 void Style_SetLexerFromFile(HWND hwnd,LPCWSTR lpszFile)
@@ -3383,7 +3383,7 @@ void Style_SetLexerFromFile(HWND hwnd,LPCWSTR lpszFile)
     UINT cp = (UINT)SendMessage(hwnd,SCI_GETCODEPAGE,0,0);
     MultiByteToWideChar(cp,0,fvCurFile.tchMode,-1,wchMode,COUNTOF(wchMode));
 
-    if (!fNoCGIGuess && (lstrcmpi(wchMode,L"cgi") == 0 || lstrcmpi(wchMode,L"fcgi") == 0)) {
+    if (!FLAG.NoCGIGuess && (lstrcmpi(wchMode,L"cgi") == 0 || lstrcmpi(wchMode,L"fcgi") == 0)) {
       char tchText[256];
       SendMessage(hwnd,SCI_GETTEXT,(WPARAM)COUNTOF(tchText)-1,(LPARAM)tchText);
       StrTrimA(tchText," \t\n\r");
@@ -3416,7 +3416,7 @@ void Style_SetLexerFromFile(HWND hwnd,LPCWSTR lpszFile)
     if (*lpszExt == L'.')
       lpszExt++;
 
-    if (!fNoCGIGuess && (lstrcmpi(lpszExt,L"cgi") == 0 || lstrcmpi(lpszExt,L"fcgi") == 0)) {
+    if (!FLAG.NoCGIGuess && (lstrcmpi(lpszExt,L"cgi") == 0 || lstrcmpi(lpszExt,L"fcgi") == 0)) {
       char tchText[256];
       SendMessage(hwnd,SCI_GETTEXT,(WPARAM)COUNTOF(tchText)-1,(LPARAM)tchText);
       StrTrimA(tchText," \t\n\r");
@@ -3458,18 +3458,18 @@ void Style_SetLexerFromFile(HWND hwnd,LPCWSTR lpszFile)
     bFound = TRUE;
   }
 
-  if (!bFound && bAutoSelect && (!fNoHTMLGuess || !fNoCGIGuess)) {
+  if (!bFound && bAutoSelect && (!FLAG.NoHTMLGuess || !FLAG.NoCGIGuess)) {
     char tchText[512];
     SendMessage(hwnd,SCI_GETTEXT,(WPARAM)COUNTOF(tchText)-1,(LPARAM)tchText);
     StrTrimA(tchText," \t\n\r");
-    if (!fNoHTMLGuess && tchText[0] == '<') {
+    if (!FLAG.NoHTMLGuess && tchText[0] == '<') {
       if (StrStrIA(tchText,"<html"))
         pLexNew = &lexHTML;
       else
         pLexNew = &lexXML;
       bFound = TRUE;
     }
-    else if (!fNoCGIGuess && (pLexSniffed = Style_SniffShebang(tchText))) {
+    else if (!FLAG.NoCGIGuess && (pLexSniffed = Style_SniffShebang(tchText))) {
       pLexNew = pLexSniffed;
       bFound = TRUE;
     }
@@ -3583,13 +3583,11 @@ BOOL Style_GetUse2ndDefault(HWND hwnd)
 //
 //  Style_SetIndentGuides()
 //
-extern int flagSimpleIndentGuides;
-
 void Style_SetIndentGuides(HWND hwnd,BOOL bShow)
 {
   int iIndentView = SC_IV_NONE;
   if (bShow) {
-    if (!flagSimpleIndentGuides) {
+    if (!FLAG.SimpleIndentGuides) {
       if (SendMessage(hwnd,SCI_GETLEXER,0,0) == SCLEX_PYTHON)
         iIndentView = SC_IV_LOOKFORWARD;
       else
