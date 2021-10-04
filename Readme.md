@@ -14,6 +14,6 @@
 * If you find any bugs or have any suggestions for the implemented lexers (and **not** only)
   feel free to **provide patches/pull requests**. Without patches or pull requests chances are
   that nothing will be fixed/implemented.
-* I'm not interested in any **localization** of Notepad2.
+* I'm interested in any **localization** of Notepad2.
 
 You can use MSVC 2022 to build Notepad2-mod.
