@@ -5475,16 +5475,12 @@ void LoadSettings()
 
   TEG_Settings.cxOpenWithDlg = IniSectionGetInt(pIniSection,L"OpenWithDlgSizeX",384);
   TEG_Settings.cxOpenWithDlg = max(TEG_Settings.cxOpenWithDlg,0);
-
   TEG_Settings.cyOpenWithDlg = IniSectionGetInt(pIniSection,L"OpenWithDlgSizeY",386);
   TEG_Settings.cyOpenWithDlg = max(TEG_Settings.cyOpenWithDlg,0);
-
   TEG_Settings.cxFavoritesDlg = IniSectionGetInt(pIniSection,L"FavoritesDlgSizeX",334);
   TEG_Settings.cxFavoritesDlg = max(TEG_Settings.cxFavoritesDlg,0);
-
   TEG_Settings.cyFavoritesDlg = IniSectionGetInt(pIniSection,L"FavoritesDlgSizeY",316);
   TEG_Settings.cyFavoritesDlg = max(TEG_Settings.cyFavoritesDlg,0);
-
   TEG_Settings.xFindReplaceDlg = IniSectionGetInt(pIniSection,L"FindReplaceDlgPosX",0);
   TEG_Settings.yFindReplaceDlg = IniSectionGetInt(pIniSection,L"FindReplaceDlgPosY",0);
 
@@ -5608,7 +5604,6 @@ void SaveSettings(BOOL bSaveSettingsNow)
   IniSectionSetInt(pIniSection,L"HighlightCurrentLine", TEG_Settings.bHiliteCurrentLine);
   IniSectionSetInt(pIniSection,L"AutoIndent", TEG_Settings.bAutoIndent);
   IniSectionSetInt(pIniSection,L"AutoCompleteWords", TEG_Settings.bAutoCompleteWords);
-
   IniSectionSetInt(pIniSection,L"ShowIndentGuides",TEG_Settings.bShowIndentGuides);
   IniSectionSetInt(pIniSection,L"TabsAsSpaces",TEG_Settings.bTabsAsSpacesG);
   IniSectionSetInt(pIniSection,L"TabIndents",TEG_Settings.bTabIndentsG);
@@ -5626,7 +5621,7 @@ void SaveSettings(BOOL bSaveSettingsNow)
   IniSectionSetInt(pIniSection,L"MarkOccurrencesMatchWholeWords",TEG_Settings.bMarkOccurrencesMatchWords);
   IniSectionSetInt(pIniSection,L"ViewWhiteSpace",TEG_Settings.bViewWhiteSpace);
   IniSectionSetInt(pIniSection,L"ViewEOLs",TEG_Settings.bViewEOLs);
-  IniSectionSetInt(pIniSection,L"DefaultEncoding",Encoding_MapIniSetting(FALSE,TEG_Settings.iDefaultEncoding));
+  IniSectionSetInt(pIniSection,L"DefaultEncoding",Encoding_MapIniSetting(FALSE,TEG_Settings.iDefaultEncoding)); //???
   IniSectionSetInt(pIniSection,L"SkipUnicodeDetection",TEG_Settings.bSkipUnicodeDetection);
   IniSectionSetInt(pIniSection,L"LoadASCIIasUTF8",TEG_Settings.bLoadASCIIasUTF8);
   IniSectionSetInt(pIniSection,L"LoadNFOasOEM",TEG_Settings.bLoadNFOasOEM);

@@ -92,7 +92,7 @@ int Application::init()
     // Command Line, Ini File and Flags
     ParseCommandLine();
     
-    _settings.load();
+    //_settings.load();
 
     FindIniFile();
     TestIniFile();
@@ -142,6 +142,8 @@ int Application::init()
 
     // Load Settings
     LoadSettings();
+
+    _settings.load();
 
     if (!InitApplication(getInstanceWin())) {
         return -1;

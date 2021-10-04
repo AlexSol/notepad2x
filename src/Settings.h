@@ -12,6 +12,7 @@ private:
 	bool createIniFile();
 	bool createIniFileEx(const std::wstring& file);
 	bool loadSettings();
+	bool saveSettings();
 	bool saveSettings(bool saveSettingsNow);
 	bool checkIniFile(std::wstring& file, const std::wstring& module);
 	bool checkIniFileRedirect(std::wstring& file, const std::wstring& module);
