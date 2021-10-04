@@ -143,8 +143,6 @@ int Application::init()
     // Load Settings
     LoadSettings();
 
-    _settings.load();
-
     if (!InitApplication(getInstanceWin())) {
         return -1;
     }
@@ -154,6 +152,8 @@ int Application::init()
     if (!(hwnd = InitInstance(getInstanceWin(), (char*)"", 1))) {
         return -1;
     }
+
+    _settings.load();
 
     HACCEL hAccMain = LoadAccelerators(getInstanceWin(), MAKEINTRESOURCE(IDR_MAINWND));
     HACCEL hAccFindReplace = LoadAccelerators(getInstanceWin(), MAKEINTRESOURCE(IDR_ACCFINDREPLACE));

@@ -29,6 +29,17 @@ typedef struct _editfindreplace
 
 } EDITFINDREPLACE, * LPEDITFINDREPLACE, * LPCEDITFINDREPLACE;
 
+typedef struct _wi
+{
+    int x;
+    int y;
+    int cx;
+    int cy;
+    int max;
+} WININFO;
+extern "C" WININFO wi;
+extern "C" HWND  hwndMain;
+
 extern "C"  T_Settings TEG_Settings;
 extern "C" int flagPortableMyDocs;
 extern "C" WCHAR tchOpenWithDir[MAX_PATH];
@@ -49,7 +60,7 @@ std::string to_utf8(std::wstring& wide_string)
 
 void Settings::load()
 {
-    saveSettings();
+    saveSettings(true);
     //findIniFile();
     //testIniFile();
     //createIniFile();
@@ -184,8 +195,15 @@ bool Settings::loadSettings()
     return false;
 }
 
-bool Settings::saveSettings()
+bool Settings::saveSettings(bool saveSettingsNow)
 {
+    createIniFile();
+
+    if (!TEG_Settings.bSaveSettings && !saveSettingsNow) {
+        //IniSetInt(L"Settings", L"SaveSettings", TEG_Settings.bSaveSettings);
+        return true;
+    }
+
     using json = nlohmann::json;
 
     json jsonfile;
@@ -278,9 +296,6 @@ bool Settings::saveSettings()
     settings["Settings"]["FavoritesDlgSize"] = { {"x", TEG_Settings.cxFavoritesDlg }, {"y", TEG_Settings.cyFavoritesDlg } };
     settings["Settings"]["FindReplaceDlgPos"] = { {"x", TEG_Settings.xFindReplaceDlg }, {"y", TEG_Settings.yFindReplaceDlg } };
 
-
-    jsonfile = settings;
-
     //jsonfile["Settings2"] = "bar";
     //jsonfile["Recent Files"] = "bar";
     //jsonfile["Recent Find"] = "bar";
@@ -288,15 +303,43 @@ bool Settings::saveSettings()
     //jsonfile["Window"] = "bar";
     //jsonfile["Custom Colors"] = "bar";
 
+    if (saveSettingsNow)
+    {
+        WINDOWPLACEMENT wndpl;
+
+        //GetWindowPlacement
+        wndpl.length = sizeof(WINDOWPLACEMENT);
+        GetWindowPlacement(hwndMain, &wndpl);
+
+        wi.x = wndpl.rcNormalPosition.left;
+        wi.y = wndpl.rcNormalPosition.top;
+        wi.cx = wndpl.rcNormalPosition.right - wndpl.rcNormalPosition.left;
+        wi.cy = wndpl.rcNormalPosition.bottom - wndpl.rcNormalPosition.top;
+        wi.max = (IsZoomed(hwndMain) || (wndpl.flags & WPF_RESTORETOMAXIMIZED));
+    }
+        
+    if(settings["Settings2"]["StickyWindowPosition"].is_null()){
+        const int ResX = GetSystemMetrics(SM_CXSCREEN);
+        const int ResY = GetSystemMetrics(SM_CYSCREEN);
+
+        settings["Settings"]["Window"] = {
+            {"SCREEN_X", ResX},
+            {"SCREEN_Y", ResY},
+            {"x", wi.x},
+            {"y", wi.y},
+            {"SizeX", wi.cx},
+            {"SizeY", wi.cy},
+            {"Maximized", (bool)wi.max}
+        };
+    }
+    
+    jsonfile = settings;
+
+    ScintillaStyles_Save();
+
     std::ofstream file(fileNameSettings_JSON);
-    file << std::setw(4) << jsonfile;
+    file << std::setw(2) << jsonfile;
 
-    return false;
-}
-
-bool Settings::saveSettings(bool saveSettingsNow)
-{
-    createIniFile();
     return false;
 }
 
@@ -364,6 +407,10 @@ bool Settings::checkIniFileRedirect(std::wstring& file, const std::wstring& modu
         }
     }
     return false;
+}
+
+void Settings::ScintillaStyles_Save()
+{
 }
 
 void loadIniSection(const std::wstring& section, std::wstring& out, const std::wstring& fileName)
