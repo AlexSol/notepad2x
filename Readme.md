@@ -1,6 +1,6 @@
-# Notepad2-mod
+# Notepad2x
 
-> *A modified version (fork) of Notepad2 based on Kai Liu's and other people's patches.*
+> *A modified version (fork) of Notepad2-mod based*
 
 [![Build status](https://img.shields.io/appveyor/ci/XhmikosR/notepad2-mod/master.svg)](https://ci.appveyor.com/project/XhmikosR/notepad2-mod/branch/master)
 [![Coverity Scan Build Status](https://img.shields.io/coverity/scan/1113.svg)](https://scan.coverity.com/projects/1113)
