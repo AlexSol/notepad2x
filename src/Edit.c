@@ -39,7 +39,7 @@
 
 #include "Config.h"
 
-extern T_Settings TEG_Settings;
+extern T_Settings SETTINGS;
 extern T_FLAG FLAG;
 
 extern HWND  hwndMain;
@@ -598,7 +598,7 @@ BOOL EditCopyAppend(HWND hwnd)
 //
 int EditDetectEOLMode(HWND hwnd,char* lpData,DWORD cbData)
 {
-  int iEOLMode = iLineEndings[TEG_Settings.iDefaultEOLMode];
+  int iEOLMode = iLineEndings[SETTINGS.DefaultEOLMode];
   char *cp = (char*)lpData;
 
   if (!cp)
@@ -943,7 +943,7 @@ BOOL IsUnicode(const char* pBuffer,int cb,LPBOOL lpbBOM,LPBOOL lpbReverse)
   if (!pBuffer || cb < 2)
     return FALSE;
 
-  if (!TEG_Settings.bSkipUnicodeDetection)
+  if (!SETTINGS.SkipUnicodeDetection)
     bIsTextUnicode = IsTextUnicode(pBuffer,cb,&i);
   else
     bIsTextUnicode = FALSE;
@@ -1248,17 +1248,17 @@ BOOL EditLoadFile(
     return FALSE;
   }
 
-  if (TEG_Settings.bLoadNFOasOEM)
+  if (SETTINGS.LoadNFOasOEM)
   {
     PCWSTR pszExt = pszFile + lstrlen(pszFile) - 4;
     if (pszExt >= pszFile && !(lstrcmpi(pszExt, L".nfo") && lstrcmpi(pszExt, L".diz")))
       bPreferOEM = TRUE;
   }
 
-  if (!Encoding_IsValid(TEG_Settings.iDefaultEncoding))
-    TEG_Settings.iDefaultEncoding = CPI_DEFAULT;
+  if (!Encoding_IsValid(SETTINGS.DefaultEncoding))
+    SETTINGS.DefaultEncoding = CPI_DEFAULT;
 
-  _iDefaultEncoding = (bPreferOEM) ? g_DOSEncoding : TEG_Settings.iDefaultEncoding;
+  _iDefaultEncoding = (bPreferOEM) ? g_DOSEncoding : SETTINGS.DefaultEncoding;
   if (iWeakSrcEncoding != -1 && Encoding_IsValid(iWeakSrcEncoding))
     _iDefaultEncoding = iWeakSrcEncoding;
 
@@ -1266,9 +1266,9 @@ BOOL EditLoadFile(
 
   if (cbData == 0) {
     FileVars_Init(NULL,0,&fvCurFile);
-    *iEOLMode = iLineEndings[TEG_Settings.iDefaultEOLMode];
+    *iEOLMode = iLineEndings[SETTINGS.DefaultEOLMode];
     if (iSrcEncoding == -1) {
-      if (TEG_Settings.bLoadASCIIasUTF8 && !bPreferOEM)
+      if (SETTINGS.LoadASCIIasUTF8 && !bPreferOEM)
         *iEncoding = CPI_UTF8;
       else
         *iEncoding = _iDefaultEncoding;
@@ -1277,7 +1277,7 @@ BOOL EditLoadFile(
       *iEncoding = iSrcEncoding;
     SendMessage(hwnd,SCI_SETCODEPAGE,(mEncoding[*iEncoding].uFlags & NCP_DEFAULT) ? iDefaultCodePage : SC_CP_UTF8,0);
     EditSetNewText(hwnd,"",0);
-    SendMessage(hwnd,SCI_SETEOLMODE,iLineEndings[TEG_Settings.iDefaultEOLMode],0);
+    SendMessage(hwnd,SCI_SETEOLMODE,iLineEndings[SETTINGS.DefaultEOLMode],0);
     GlobalFree(lpData);
   }
 
@@ -1334,7 +1334,7 @@ BOOL EditLoadFile(
               FileVars_IsUTF8(&fvCurFile) ||
               (iSrcEncoding == CPI_UTF8 || iSrcEncoding == CPI_UTF8SIGN) ||
               // from menu "Reload As UTF-8"
-              (!bPreferOEM && TEG_Settings.bLoadASCIIasUTF8) ||
+              (!bPreferOEM && SETTINGS.LoadASCIIasUTF8) ||
               (IsUTF8(lpData,cbData) &&
               (((UTF8_mbslen_bytes(UTF8StringStart(lpData)) - 1 !=
                 UTF8_mbslen(UTF8StringStart(lpData),IsUTF8Signature(lpData) ? cbData-3 : cbData)) ||
@@ -1375,7 +1375,7 @@ BOOL EditLoadFile(
             if (iWeakSrcEncoding == -1)
               *iEncoding = _iDefaultEncoding;
             else if (mEncoding[iWeakSrcEncoding].uFlags & NCP_INTERNAL)
-              *iEncoding = TEG_Settings.iDefaultEncoding;
+              *iEncoding = SETTINGS.DefaultEncoding;
             else
               *iEncoding = _iDefaultEncoding;
           }
@@ -1475,13 +1475,13 @@ BOOL EditSaveFile(
     return FALSE;
 
   // ensure consistent line endings
-  if (TEG_Settings.bFixLineEndings) {
+  if (SETTINGS.FixLineEndings) {
     SendMessage(hwnd,SCI_CONVERTEOLS,SendMessage(hwnd,SCI_GETEOLMODE,0,0),0);
     EditFixPositions(hwnd);
   }
 
   // strip trailing blanks
-  if (TEG_Settings.bAutoStripBlanks)
+  if (SETTINGS.AutoStripBlanks)
     EditStripTrailingBlanks(hwnd,TRUE);
 
   // get text
@@ -5000,10 +5000,10 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
         }
 
         if (!bSwitchedFindReplace) {
-          if (TEG_Settings.xFindReplaceDlg == 0 || TEG_Settings.yFindReplaceDlg == 0)
+          if (SETTINGS.xFindReplaceDlg == 0 || SETTINGS.yFindReplaceDlg == 0)
             CenterDlgInParent(hwnd);
           else
-            SetDlgPos(hwnd,TEG_Settings.xFindReplaceDlg,TEG_Settings.yFindReplaceDlg);
+            SetDlgPos(hwnd,SETTINGS.xFindReplaceDlg,SETTINGS.yFindReplaceDlg);
         }
 
         else {
@@ -5252,12 +5252,12 @@ INT_PTR CALLBACK EditFindReplaceDlgProcW(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
           break;
 
         case IDACC_SAVEPOS:
-          GetDlgPos(hwnd,&TEG_Settings.xFindReplaceDlg,&TEG_Settings.yFindReplaceDlg);
+          GetDlgPos(hwnd,&SETTINGS.xFindReplaceDlg,&SETTINGS.yFindReplaceDlg);
           break;
 
         case IDACC_RESETPOS:
           CenterDlgInParent(hwnd);
-          TEG_Settings.xFindReplaceDlg = TEG_Settings.yFindReplaceDlg = 0;
+          SETTINGS.xFindReplaceDlg = SETTINGS.yFindReplaceDlg = 0;
           break;
 
         case IDACC_FINDNEXT:
@@ -5799,7 +5799,7 @@ void CompleteWord(HWND hwnd, BOOL autoInsert) {
 //  EditMarkAll()
 //  Mark all occurrences of the text currently selected (by Aleksandar Lekov)
 //
-void EditMarkAll(HWND hwnd, int iMarkOccurrences, BOOL bMarkOccurrencesMatchCase, BOOL bMarkOccurrencesMatchWords)
+void EditMarkAll(HWND hwnd, int MarkOccurrences, BOOL MarkOccurrencesMatchCase, BOOL MarkOccurrencesMatchWords)
 {
   struct Sci_TextToFind ttf;
   int iPos;
@@ -5811,7 +5811,7 @@ void EditMarkAll(HWND hwnd, int iMarkOccurrences, BOOL bMarkOccurrencesMatchCase
   int iMatchesCount;
 
   // feature is off
-  if (!iMarkOccurrences)
+  if (!MarkOccurrences)
     return;
 
 
@@ -5840,7 +5840,7 @@ void EditMarkAll(HWND hwnd, int iMarkOccurrences, BOOL bMarkOccurrencesMatchCase
 
 
   // exit if selection is not a word and Match whole words only is enabled
-  if (TEG_Settings.bMarkOccurrencesMatchWords)
+  if (SETTINGS.MarkOccurrencesMatchWords)
   {
     iSelStart = 0;
     while (pszText[iSelStart])
@@ -5862,12 +5862,12 @@ void EditMarkAll(HWND hwnd, int iMarkOccurrences, BOOL bMarkOccurrencesMatchCase
 
   // set style
   SendMessage(hwnd, SCI_INDICSETALPHA, 1, 100);
-  SendMessage(hwnd, SCI_INDICSETFORE, 1, 0xff << ((TEG_Settings.iMarkOccurrences - 1) << 3));
+  SendMessage(hwnd, SCI_INDICSETFORE, 1, 0xff << ((SETTINGS.MarkOccurrences - 1) << 3));
   SendMessage(hwnd, SCI_INDICSETSTYLE, 1, INDIC_ROUNDBOX);
 
   iMatchesCount = 0;
   while ((iPos = (int)SendMessage(hwnd, SCI_FINDTEXT,
-      (TEG_Settings.bMarkOccurrencesMatchCase ? SCFIND_MATCHCASE : 0) | (TEG_Settings.bMarkOccurrencesMatchWords ? SCFIND_WHOLEWORD : 0),
+      (SETTINGS.MarkOccurrencesMatchCase ? SCFIND_MATCHCASE : 0) | (SETTINGS.MarkOccurrencesMatchWords ? SCFIND_WHOLEWORD : 0),
       (LPARAM)&ttf)) != -1
       && ++iMatchesCount < 2000)
   {
@@ -6896,7 +6896,7 @@ BOOL FileVars_Init(char *lpData,DWORD cbData,LPFILEVARS lpfv) {
   BOOL bDisableFileVariables = FALSE;
 
   ZeroMemory(lpfv,sizeof(FILEVARS));
-  if ((FLAG.NoFileVariables && TEG_Settings.bNoEncodingTags) || !lpData || !cbData)
+  if ((FLAG.NoFileVariables && SETTINGS.NoEncodingTags) || !lpData || !cbData)
     return(TRUE);
 
   lstrcpynA(tch,lpData,min(cbData+1,COUNTOF(tch)));
@@ -6939,7 +6939,7 @@ BOOL FileVars_Init(char *lpData,DWORD cbData,LPFILEVARS lpfv) {
     }
   }
 
-  if (!IsUTF8Signature(lpData) && !TEG_Settings.bNoEncodingTags && !bDisableFileVariables) {
+  if (!IsUTF8Signature(lpData) && !SETTINGS.NoEncodingTags && !bDisableFileVariables) {
 
     if (FileVars_ParseStr(tch,"encoding",lpfv->tchEncoding,COUNTOF(lpfv->tchEncoding)))
       lpfv->mask |= FV_ENCODING;
@@ -6996,7 +6996,7 @@ BOOL FileVars_Init(char *lpData,DWORD cbData,LPFILEVARS lpfv) {
       }
     }
 
-    if (!IsUTF8Signature(lpData) && !TEG_Settings.bNoEncodingTags && !bDisableFileVariables) {
+    if (!IsUTF8Signature(lpData) && !SETTINGS.NoEncodingTags && !bDisableFileVariables) {
 
       if (FileVars_ParseStr(tch,"encoding",lpfv->tchEncoding,COUNTOF(lpfv->tchEncoding)))
         lpfv->mask |= FV_ENCODING;
@@ -7036,7 +7036,7 @@ BOOL FileVars_Apply(HWND hwnd,LPFILEVARS lpfv) {
   if (lpfv->mask & FV_TABWIDTH)
     iTabWidth = lpfv->iTabWidth;
   else
-    iTabWidth = TEG_Settings.iTabWidthG;
+    iTabWidth = SETTINGS.TabWidthG;
   SendMessage(hwnd,SCI_SETTABWIDTH,iTabWidth,0);
 
   if (lpfv->mask & FV_INDENTWIDTH)
@@ -7044,34 +7044,34 @@ BOOL FileVars_Apply(HWND hwnd,LPFILEVARS lpfv) {
   else if (lpfv->mask & FV_TABWIDTH)
     iIndentWidth = 0;
   else
-    iIndentWidth = TEG_Settings.iIndentWidthG;
+    iIndentWidth = SETTINGS.IndentWidthG;
   SendMessage(hwnd,SCI_SETINDENT,iIndentWidth,0);
 
   if (lpfv->mask & FV_TABSASSPACES)
     bTabsAsSpaces = lpfv->bTabsAsSpaces;
   else
-    bTabsAsSpaces = TEG_Settings.bTabsAsSpacesG;
+    bTabsAsSpaces = SETTINGS.TabsAsSpacesG;
   SendMessage(hwnd,SCI_SETUSETABS,!bTabsAsSpaces,0);
 
   if (lpfv->mask & FV_TABINDENTS)
     bTabIndents = lpfv->bTabIndents;
   else
-    bTabIndents = TEG_Settings.bTabIndentsG;
+    bTabIndents = SETTINGS.TabIndentsG;
   SendMessage(hwndEdit,SCI_SETTABINDENTS,bTabIndents,0);
 
   if (lpfv->mask & FV_WORDWRAP)
     fWordWrap = lpfv->fWordWrap;
   else
-    fWordWrap = TEG_Settings.fWordWrapG;
+    fWordWrap = SETTINGS.WordWrapG;
   if (!fWordWrap)
     SendMessage(hwndEdit,SCI_SETWRAPMODE,SC_WRAP_NONE,0);
   else
-    SendMessage(hwndEdit,SCI_SETWRAPMODE,(TEG_Settings.iWordWrapMode == 0) ? SC_WRAP_WORD : SC_WRAP_CHAR,0);
+    SendMessage(hwndEdit,SCI_SETWRAPMODE,(SETTINGS.WordWrapMode == 0) ? SC_WRAP_WORD : SC_WRAP_CHAR,0);
 
   if (lpfv->mask & FV_LONGLINESLIMIT)
     iLongLinesLimit = lpfv->iLongLinesLimit;
   else
-    iLongLinesLimit = TEG_Settings.iLongLinesLimitG;
+    iLongLinesLimit = SETTINGS.LongLinesLimitG;
   SendMessage(hwnd,SCI_SETEDGECOLUMN,iLongLinesLimit,0);
 
   iWrapCol = 0;

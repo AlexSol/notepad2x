@@ -36,10 +36,11 @@ extern "C" {
 }
 #include "resource.h"
 
+#include "Config.h"
 
 extern "C" HINSTANCE g_hInstance;
 
-extern "C" T_Settings TEG_Settings;
+extern "C" T_Settings SETTINGS;
 // Global settings...
 //extern "C" int TEG_Settings.iPrintHeader;
 // extern "C" int TEG_Settings.iPrintFooter;
@@ -183,8 +184,8 @@ extern "C" BOOL EditPrint(HWND hwnd,LPCWSTR pszDocTitle,LPCWSTR pszPageFormat)
   // unprintable regions on all four sides of the page in device units.
 
   // Take in account the page setup given by the user (if one value is not null)
-  if (TEG_Settings.pagesetupMargin.left != 0 || TEG_Settings.pagesetupMargin.right != 0 ||
-          TEG_Settings.pagesetupMargin.top != 0 || TEG_Settings.pagesetupMargin.bottom != 0) {
+  if (SETTINGS.pagesetupMargin.left != 0 || SETTINGS.pagesetupMargin.right != 0 ||
+          SETTINGS.pagesetupMargin.top != 0 || SETTINGS.pagesetupMargin.bottom != 0) {
 
     // Convert the hundredths of millimeters (HiMetric) or
     // thousandths of inches (HiEnglish) margin values
@@ -195,15 +196,15 @@ extern "C" BOOL EditPrint(HWND hwnd,LPCWSTR pszDocTitle,LPCWSTR pszPageFormat)
     GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_IMEASURE, localeInfo, 3);
 
     if (localeInfo[0] == L'0') {  // Metric system. L'1' is US System
-      rectSetup.left = MulDiv (TEG_Settings.pagesetupMargin.left, ptDpi.x, 2540);
-      rectSetup.top = MulDiv (TEG_Settings.pagesetupMargin.top, ptDpi.y, 2540);
-      rectSetup.right  = MulDiv(TEG_Settings.pagesetupMargin.right, ptDpi.x, 2540);
-      rectSetup.bottom  = MulDiv(TEG_Settings.pagesetupMargin.bottom, ptDpi.y, 2540);
+      rectSetup.left = MulDiv (SETTINGS.pagesetupMargin.left, ptDpi.x, 2540);
+      rectSetup.top = MulDiv (SETTINGS.pagesetupMargin.top, ptDpi.y, 2540);
+      rectSetup.right  = MulDiv(SETTINGS.pagesetupMargin.right, ptDpi.x, 2540);
+      rectSetup.bottom  = MulDiv(SETTINGS.pagesetupMargin.bottom, ptDpi.y, 2540);
     } else {
-      rectSetup.left  = MulDiv(TEG_Settings.pagesetupMargin.left, ptDpi.x, 1000);
-      rectSetup.top  = MulDiv(TEG_Settings.pagesetupMargin.top, ptDpi.y, 1000);
-      rectSetup.right  = MulDiv(TEG_Settings.pagesetupMargin.right, ptDpi.x, 1000);
-      rectSetup.bottom  = MulDiv(TEG_Settings.pagesetupMargin.bottom, ptDpi.y, 1000);
+      rectSetup.left  = MulDiv(SETTINGS.pagesetupMargin.left, ptDpi.x, 1000);
+      rectSetup.top  = MulDiv(SETTINGS.pagesetupMargin.top, ptDpi.y, 1000);
+      rectSetup.right  = MulDiv(SETTINGS.pagesetupMargin.right, ptDpi.x, 1000);
+      rectSetup.bottom  = MulDiv(SETTINGS.pagesetupMargin.bottom, ptDpi.y, 1000);
     }
 
     // Dont reduce margins below the minimum printable area
@@ -241,7 +242,7 @@ extern "C" BOOL EditPrint(HWND hwnd,LPCWSTR pszDocTitle,LPCWSTR pszPageFormat)
   GetTextMetrics(hdc, &tm);
   headerLineHeight = tm.tmHeight + tm.tmExternalLeading;
 
-  if (TEG_Settings.iPrintHeader == 3)
+  if (SETTINGS.PrintHeader == 3)
     headerLineHeight = 0;
 
   footerLineHeight = MulDiv(7,ptDpi.y, 72);
@@ -257,7 +258,7 @@ extern "C" BOOL EditPrint(HWND hwnd,LPCWSTR pszDocTitle,LPCWSTR pszPageFormat)
   GetTextMetrics(hdc, &tm);
   footerLineHeight = tm.tmHeight + tm.tmExternalLeading;
 
-  if (TEG_Settings.iPrintFooter == 1)
+  if (SETTINGS.PrintFooter == 1)
     footerLineHeight = 0;
 
   di.lpszDocName = pszDocTitle;
@@ -279,7 +280,7 @@ extern "C" BOOL EditPrint(HWND hwnd,LPCWSTR pszDocTitle,LPCWSTR pszPageFormat)
   GetDateFormat(LOCALE_USER_DEFAULT,DATE_SHORTDATE,&st,NULL,dateString,256);
 
   // Get current time...
-  if (TEG_Settings.iPrintHeader == 0)
+  if (SETTINGS.PrintHeader == 0)
   {
     WCHAR timeString[128];
     GetTimeFormat(LOCALE_USER_DEFAULT,TIME_NOSECONDS,&st,NULL,timeString,128);
@@ -294,10 +295,10 @@ extern "C" BOOL EditPrint(HWND hwnd,LPCWSTR pszDocTitle,LPCWSTR pszPageFormat)
     SC_PRINT_BLACKONWHITE,
     SC_PRINT_COLOURONWHITE,
     SC_PRINT_COLOURONWHITEDEFAULTBG };
-  SendMessage(hwnd,SCI_SETPRINTCOLOURMODE,printColorModes[TEG_Settings.iPrintColor],0);
+  SendMessage(hwnd,SCI_SETPRINTCOLOURMODE,printColorModes[SETTINGS.PrintColor],0);
 
   // Set print zoom...
-  SendMessage(hwnd,SCI_SETPRINTMAGNIFICATION,(WPARAM)TEG_Settings.iPrintZoom,0);
+  SendMessage(hwnd,SCI_SETPRINTMAGNIFICATION,(WPARAM)SETTINGS.PrintZoom,0);
 
   lengthDoc = (int)SendMessage(hwnd,SCI_GETLENGTH,0,0);
   lengthDocMax = lengthDoc;
@@ -359,7 +360,7 @@ extern "C" BOOL EditPrint(HWND hwnd,LPCWSTR pszDocTitle,LPCWSTR pszPageFormat)
                   frPrint.rc.right, frPrint.rc.top - headerLineHeight / 2};
       rcw.bottom = rcw.top + headerLineHeight;
 
-      if (TEG_Settings.iPrintHeader < 3)
+      if (SETTINGS.PrintHeader < 3)
       {
         ExtTextOut(hdc, frPrint.rc.left + 5, frPrint.rc.top - headerLineHeight / 2,
                       /*ETO_OPAQUE*/0, &rcw, pszDocTitle,
@@ -367,7 +368,7 @@ extern "C" BOOL EditPrint(HWND hwnd,LPCWSTR pszDocTitle,LPCWSTR pszPageFormat)
       }
 
       // Print date in header
-      if (TEG_Settings.iPrintHeader == 0 || TEG_Settings.iPrintHeader == 1)
+      if (SETTINGS.PrintHeader == 0 || SETTINGS.PrintHeader == 1)
       {
         SIZE sizeInfo;
         SelectObject(hdc,fontFooter);
@@ -377,7 +378,7 @@ extern "C" BOOL EditPrint(HWND hwnd,LPCWSTR pszDocTitle,LPCWSTR pszPageFormat)
                       lstrlen(dateString), NULL);
       }
 
-      if (TEG_Settings.iPrintHeader < 3)
+      if (SETTINGS.PrintHeader < 3)
       {
         SetTextAlign(hdc, ta);
         pen = CreatePen(0, 1, RGB(0,0,0));
@@ -402,7 +403,7 @@ extern "C" BOOL EditPrint(HWND hwnd,LPCWSTR pszDocTitle,LPCWSTR pszPageFormat)
       RECT rcw = {frPrint.rc.left, frPrint.rc.bottom + footerLineHeight / 2,
                   frPrint.rc.right, frPrint.rc.bottom + footerLineHeight + footerLineHeight / 2};
 
-      if (TEG_Settings.iPrintFooter == 0)
+      if (SETTINGS.PrintFooter == 0)
       {
         SIZE sizeFooter;
         GetTextExtentPoint32(hdc,pageString,lstrlen(pageString),&sizeFooter);
@@ -469,7 +470,7 @@ extern "C" UINT_PTR CALLBACK PageSetupHook(HWND hwnd, UINT uiMsg, WPARAM wParam,
         SendDlgItemMessage(hwnd,30,EM_LIMITTEXT,32,0);
 
         SendDlgItemMessage(hwnd,31,UDM_SETRANGE,0,MAKELONG((short)20,(short)-10));
-        SendDlgItemMessage(hwnd,31,UDM_SETPOS,0,MAKELONG((short)TEG_Settings.iPrintZoom,0));
+        SendDlgItemMessage(hwnd,31,UDM_SETPOS,0,MAKELONG((short)SETTINGS.PrintZoom,0));
 
         // Set header options
         GetString(IDS_PRINT_HEADER,tch,COUNTOF(tch));
@@ -480,7 +481,7 @@ extern "C" UINT_PTR CALLBACK PageSetupHook(HWND hwnd, UINT uiMsg, WPARAM wParam,
           if (*p1)
             SendDlgItemMessage(hwnd,32,CB_ADDSTRING,0,(LPARAM)p1);
           p1 = p2; }
-        SendDlgItemMessage(hwnd,32,CB_SETCURSEL,(WPARAM)TEG_Settings.iPrintHeader,0);
+        SendDlgItemMessage(hwnd,32,CB_SETCURSEL,(WPARAM)SETTINGS.PrintHeader,0);
 
         // Set footer options
         GetString(IDS_PRINT_FOOTER,tch,COUNTOF(tch));
@@ -491,7 +492,7 @@ extern "C" UINT_PTR CALLBACK PageSetupHook(HWND hwnd, UINT uiMsg, WPARAM wParam,
           if (*p1)
             SendDlgItemMessage(hwnd,33,CB_ADDSTRING,0,(LPARAM)p1);
           p1 = p2; }
-        SendDlgItemMessage(hwnd,33,CB_SETCURSEL,(WPARAM)TEG_Settings.iPrintFooter,0);
+        SendDlgItemMessage(hwnd,33,CB_SETCURSEL,(WPARAM)SETTINGS.PrintFooter,0);
 
         // Set color options
         GetString(IDS_PRINT_COLOR,tch,COUNTOF(tch));
@@ -502,7 +503,7 @@ extern "C" UINT_PTR CALLBACK PageSetupHook(HWND hwnd, UINT uiMsg, WPARAM wParam,
           if (*p1)
             SendDlgItemMessage(hwnd,34,CB_ADDSTRING,0,(LPARAM)p1);
           p1 = p2; }
-        SendDlgItemMessage(hwnd,34,CB_SETCURSEL,(WPARAM)TEG_Settings.iPrintColor,0);
+        SendDlgItemMessage(hwnd,34,CB_SETCURSEL,(WPARAM)SETTINGS.PrintColor,0);
 
         // Make combos handier
         SendDlgItemMessage(hwnd,32,CB_SETEXTENDEDUI,TRUE,0);
@@ -518,13 +519,13 @@ extern "C" UINT_PTR CALLBACK PageSetupHook(HWND hwnd, UINT uiMsg, WPARAM wParam,
       {
         int iPos = (int)SendDlgItemMessage(hwnd,31,UDM_GETPOS,0,0);
         if (HIWORD(iPos) == 0)
-          TEG_Settings.iPrintZoom = (int)(short)LOWORD(iPos);
+          SETTINGS.PrintZoom = (int)(short)LOWORD(iPos);
         else
-          TEG_Settings.iPrintZoom = 0;
+          SETTINGS.PrintZoom = 0;
 
-        TEG_Settings.iPrintHeader = (int)SendDlgItemMessage(hwnd, 32, CB_GETCURSEL, 0, 0);
-        TEG_Settings.iPrintFooter = (int)SendDlgItemMessage(hwnd, 33, CB_GETCURSEL, 0, 0);
-        TEG_Settings.iPrintColor = (int)SendDlgItemMessage(hwnd, 34, CB_GETCURSEL, 0, 0);
+        SETTINGS.PrintHeader = (int)SendDlgItemMessage(hwnd, 32, CB_GETCURSEL, 0, 0);
+        SETTINGS.PrintFooter = (int)SendDlgItemMessage(hwnd, 33, CB_GETCURSEL, 0, 0);
+        SETTINGS.PrintColor = (int)SendDlgItemMessage(hwnd, 34, CB_GETCURSEL, 0, 0);
       }
       break;
 
@@ -549,14 +550,14 @@ extern "C" void EditPrintSetup(HWND hwnd)
   pdlg.hwndOwner = GetParent(hwnd);
   pdlg.hInstance = g_hInstance;
 
-  if (TEG_Settings.pagesetupMargin.left != 0 || TEG_Settings.pagesetupMargin.right != 0 ||
-          TEG_Settings.pagesetupMargin.top != 0 || TEG_Settings.pagesetupMargin.bottom != 0) {
+  if (SETTINGS.pagesetupMargin.left != 0 || SETTINGS.pagesetupMargin.right != 0 ||
+          SETTINGS.pagesetupMargin.top != 0 || SETTINGS.pagesetupMargin.bottom != 0) {
     pdlg.Flags |= PSD_MARGINS;
 
-    pdlg.rtMargin.left = TEG_Settings.pagesetupMargin.left;
-    pdlg.rtMargin.top = TEG_Settings.pagesetupMargin.top;
-    pdlg.rtMargin.right = TEG_Settings.pagesetupMargin.right;
-    pdlg.rtMargin.bottom = TEG_Settings.pagesetupMargin.bottom;
+    pdlg.rtMargin.left = SETTINGS.pagesetupMargin.left;
+    pdlg.rtMargin.top = SETTINGS.pagesetupMargin.top;
+    pdlg.rtMargin.right = SETTINGS.pagesetupMargin.right;
+    pdlg.rtMargin.bottom = SETTINGS.pagesetupMargin.bottom;
   }
 
   pdlg.hDevMode = hDevMode;
@@ -564,10 +565,10 @@ extern "C" void EditPrintSetup(HWND hwnd)
 
   if (PageSetupDlg(&pdlg)) {
 
-    TEG_Settings.pagesetupMargin.left = pdlg.rtMargin.left;
-    TEG_Settings.pagesetupMargin.top = pdlg.rtMargin.top;
-    TEG_Settings.pagesetupMargin.right = pdlg.rtMargin.right;
-    TEG_Settings.pagesetupMargin.bottom = pdlg.rtMargin.bottom;
+    SETTINGS.pagesetupMargin.left = pdlg.rtMargin.left;
+    SETTINGS.pagesetupMargin.top = pdlg.rtMargin.top;
+    SETTINGS.pagesetupMargin.right = pdlg.rtMargin.right;
+    SETTINGS.pagesetupMargin.bottom = pdlg.rtMargin.bottom;
 
     hDevMode = pdlg.hDevMode;
     hDevNames = pdlg.hDevNames;
@@ -583,23 +584,23 @@ extern "C" void EditPrintSetup(HWND hwnd)
 //
 extern "C" void EditPrintInit()
 {
-  if (TEG_Settings.pagesetupMargin.left == -1 || TEG_Settings.pagesetupMargin.top == -1 ||
-      TEG_Settings.pagesetupMargin.right == -1 || TEG_Settings.pagesetupMargin.bottom == -1)
+  if (SETTINGS.pagesetupMargin.left == -1 || SETTINGS.pagesetupMargin.top == -1 ||
+      SETTINGS.pagesetupMargin.right == -1 || SETTINGS.pagesetupMargin.bottom == -1)
   {
     WCHAR localeInfo[3];
     GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_IMEASURE, localeInfo, 3);
 
     if (localeInfo[0] == L'0') {  // Metric system. L'1' is US System
-      TEG_Settings.pagesetupMargin.left = 2000;
-      TEG_Settings.pagesetupMargin.top = 2000;
-      TEG_Settings.pagesetupMargin.right = 2000;
-      TEG_Settings.pagesetupMargin.bottom = 2000; }
+      SETTINGS.pagesetupMargin.left = 2000;
+      SETTINGS.pagesetupMargin.top = 2000;
+      SETTINGS.pagesetupMargin.right = 2000;
+      SETTINGS.pagesetupMargin.bottom = 2000; }
 
     else {
-      TEG_Settings.pagesetupMargin.left = 1000;
-      TEG_Settings.pagesetupMargin.top = 1000;
-      TEG_Settings.pagesetupMargin.right = 1000;
-      TEG_Settings.pagesetupMargin.bottom = 1000; }
+      SETTINGS.pagesetupMargin.left = 1000;
+      SETTINGS.pagesetupMargin.top = 1000;
+      SETTINGS.pagesetupMargin.right = 1000;
+      SETTINGS.pagesetupMargin.bottom = 1000; }
   }
 }
 

@@ -40,7 +40,7 @@ typedef struct _wi
 extern "C" WININFO wi;
 extern "C" HWND  hwndMain;
 
-extern "C"  T_Settings TEG_Settings;
+extern "C"  T_Settings SETTINGS;
 extern "C" WCHAR tchOpenWithDir[MAX_PATH];
 extern "C" WCHAR tchFavoritesDir[MAX_PATH];
 extern "C" EDITFINDREPLACE efrData;
@@ -198,7 +198,7 @@ bool Settings::saveSettings(bool saveSettingsNow)
 {
     createIniFile();
 
-    if (!TEG_Settings.bSaveSettings && !saveSettingsNow) {
+    if (!SETTINGS.SaveSettings && !saveSettingsNow) {
         //IniSetInt(L"Settings", L"SaveSettings", TEG_Settings.bSaveSettings);
         return true;
     }
@@ -208,9 +208,9 @@ bool Settings::saveSettings(bool saveSettingsNow)
     json jsonfile;
     
     json settings;
-    settings["Settings"]["SaveSettings"] = TEG_Settings.bSaveSettings;
-    settings["Settings"]["SaveRecentFiles"] = TEG_Settings.bSaveRecentFiles;
-    settings["Settings"]["SaveFindReplace"] = TEG_Settings.bSaveFindReplace;
+    settings["Settings"]["SaveSettings"] = SETTINGS.SaveSettings;
+    settings["Settings"]["SaveRecentFiles"] = SETTINGS.SaveRecentFiles;
+    settings["Settings"]["SaveFindReplace"] = SETTINGS.SaveFindReplace;
     
     settings["Settings"]["CloseFind"] = efrData.bFindClose;
     settings["Settings"]["CloseReplace"] = efrData.bReplaceClose;
@@ -229,71 +229,71 @@ bool Settings::saveSettings(bool saveSettingsNow)
         settings["Settings"]["Favorites"] = to_utf8(ws);
     }
 
-    settings["Settings"]["PathNameFormat"] = TEG_Settings.iPathNameFormat;
-    settings["Settings"]["WordWrap"] = TEG_Settings.fWordWrapG;
-    settings["Settings"]["WordWrapMode"] = TEG_Settings.iWordWrapMode;
-    settings["Settings"]["WordWrapIndent"] = TEG_Settings.iWordWrapIndent;
-    settings["Settings"]["WordWrapSymbols"] = TEG_Settings.iWordWrapSymbols;
-    settings["Settings"]["ShowWordWrapSymbols"] = TEG_Settings.bShowWordWrapSymbols;
-    settings["Settings"]["MatchBraces"] = TEG_Settings.bMatchBraces;
-    settings["Settings"]["AutoCloseTags"] = TEG_Settings.bAutoCloseTags;
-    settings["Settings"]["HighlightCurrentLine"] = TEG_Settings.bHiliteCurrentLine;
-    settings["Settings"]["AutoIndent"] = TEG_Settings.bAutoIndent;
-    settings["Settings"]["AutoCompleteWords"] = TEG_Settings.bAutoCompleteWords;
-    settings["Settings"]["ShowIndentGuides"] = TEG_Settings.bShowIndentGuides;
-    settings["Settings"]["TabsAsSpaces"] = TEG_Settings.bTabsAsSpacesG;
-    settings["Settings"]["TabIndents"] = TEG_Settings.bTabIndentsG;
-    settings["Settings"]["BackspaceUnindents"] = TEG_Settings.bBackspaceUnindents;
-    settings["Settings"]["TabWidth"] = TEG_Settings.iTabWidthG;
-    settings["Settings"]["IndentWidth"] = TEG_Settings.iIndentWidthG;
-    settings["Settings"]["MarkLongLines"] = TEG_Settings.bMarkLongLines;
-    settings["Settings"]["LongLinesLimit"] = TEG_Settings.iLongLinesLimitG;
-    settings["Settings"]["LongLineMode"] = TEG_Settings.iLongLineMode;
-    settings["Settings"]["ShowSelectionMargin"] = TEG_Settings.bShowSelectionMargin;
-    settings["Settings"]["ShowLineNumbers"] = TEG_Settings.bShowLineNumbers;
-    settings["Settings"]["ShowCodeFolding"] = TEG_Settings.bShowCodeFolding;
-    settings["Settings"]["MarkOccurrences"] = TEG_Settings.iMarkOccurrences;
-    settings["Settings"]["MarkOccurrencesMatchCase"] = TEG_Settings.bMarkOccurrencesMatchCase;
-    settings["Settings"]["MarkOccurrencesMatchWholeWords"] = TEG_Settings.bMarkOccurrencesMatchWords;
-    settings["Settings"]["ViewWhiteSpace"] = TEG_Settings.bViewWhiteSpace;
-    settings["Settings"]["ViewEOLs"] = TEG_Settings.bViewEOLs;
-    settings["Settings"]["DefaultEncoding"] = Encoding_MapIniSetting(FALSE, TEG_Settings.iDefaultEncoding);
-    settings["Settings"]["SkipUnicodeDetection"] = TEG_Settings.bSkipUnicodeDetection;
-    settings["Settings"]["LoadASCIIasUTF8"] = TEG_Settings.bLoadASCIIasUTF8;
-    settings["Settings"]["LoadNFOasOEM"] = TEG_Settings.bLoadNFOasOEM;
-    settings["Settings"]["NoEncodingTags"] = TEG_Settings.bNoEncodingTags;
-    settings["Settings"]["DefaultEOLMode"] = TEG_Settings.iDefaultEOLMode;
-    settings["Settings"]["FixLineEndings"] = TEG_Settings.bFixLineEndings;
-    settings["Settings"]["FixTrailingBlanks"] = TEG_Settings.bAutoStripBlanks;
-    settings["Settings"]["PrintHeader"] = TEG_Settings.iPrintHeader;
-    settings["Settings"]["PrintFooter"] = TEG_Settings.iPrintFooter;
-    settings["Settings"]["PrintColorMode"] = TEG_Settings.iPrintColor;
-    settings["Settings"]["PrintZoom"] = TEG_Settings.iPrintZoom + 10;
+    settings["Settings"]["PathNameFormat"] = SETTINGS.PathNameFormat;
+    settings["Settings"]["WordWrap"] = SETTINGS.WordWrapG;
+    settings["Settings"]["WordWrapMode"] = SETTINGS.WordWrapMode;
+    settings["Settings"]["WordWrapIndent"] = SETTINGS.iWordWrapIndent;
+    settings["Settings"]["WordWrapSymbols"] = SETTINGS.iWordWrapSymbols;
+    settings["Settings"]["ShowWordWrapSymbols"] = SETTINGS.ShowWordWrapSymbols;
+    settings["Settings"]["MatchBraces"] = SETTINGS.MatchBraces;
+    settings["Settings"]["AutoCloseTags"] = SETTINGS.AutoCloseTags;
+    settings["Settings"]["HighlightCurrentLine"] = SETTINGS.HiliteCurrentLine;
+    settings["Settings"]["AutoIndent"] = SETTINGS.AutoIndent;
+    settings["Settings"]["AutoCompleteWords"] = SETTINGS.AutoCompleteWords;
+    settings["Settings"]["ShowIndentGuides"] = SETTINGS.ShowIndentGuides;
+    settings["Settings"]["TabsAsSpaces"] = SETTINGS.TabsAsSpacesG;
+    settings["Settings"]["TabIndents"] = SETTINGS.TabIndentsG;
+    settings["Settings"]["BackspaceUnindents"] = SETTINGS.BackspaceUnindents;
+    settings["Settings"]["TabWidth"] = SETTINGS.TabWidthG;
+    settings["Settings"]["IndentWidth"] = SETTINGS.IndentWidthG;
+    settings["Settings"]["MarkLongLines"] = SETTINGS.MarkLongLines;
+    settings["Settings"]["LongLinesLimit"] = SETTINGS.LongLinesLimitG;
+    settings["Settings"]["LongLineMode"] = SETTINGS.LongLineMode;
+    settings["Settings"]["ShowSelectionMargin"] = SETTINGS.ShowSelectionMargin;
+    settings["Settings"]["ShowLineNumbers"] = SETTINGS.ShowLineNumbers;
+    settings["Settings"]["ShowCodeFolding"] = SETTINGS.ShowCodeFolding;
+    settings["Settings"]["MarkOccurrences"] = SETTINGS.MarkOccurrences;
+    settings["Settings"]["MarkOccurrencesMatchCase"] = SETTINGS.MarkOccurrencesMatchCase;
+    settings["Settings"]["MarkOccurrencesMatchWholeWords"] = SETTINGS.MarkOccurrencesMatchWords;
+    settings["Settings"]["ViewWhiteSpace"] = SETTINGS.ViewWhiteSpace;
+    settings["Settings"]["ViewEOLs"] = SETTINGS.ViewEOLs;
+    settings["Settings"]["DefaultEncoding"] = Encoding_MapIniSetting(FALSE, SETTINGS.DefaultEncoding);
+    settings["Settings"]["SkipUnicodeDetection"] = SETTINGS.SkipUnicodeDetection;
+    settings["Settings"]["LoadASCIIasUTF8"] = SETTINGS.LoadASCIIasUTF8;
+    settings["Settings"]["LoadNFOasOEM"] = SETTINGS.LoadNFOasOEM;
+    settings["Settings"]["NoEncodingTags"] = SETTINGS.NoEncodingTags;
+    settings["Settings"]["DefaultEOLMode"] = SETTINGS.DefaultEOLMode;
+    settings["Settings"]["FixLineEndings"] = SETTINGS.FixLineEndings;
+    settings["Settings"]["FixTrailingBlanks"] = SETTINGS.AutoStripBlanks;
+    settings["Settings"]["PrintHeader"] = SETTINGS.PrintHeader;
+    settings["Settings"]["PrintFooter"] = SETTINGS.PrintFooter;
+    settings["Settings"]["PrintColorMode"] = SETTINGS.PrintColor;
+    settings["Settings"]["PrintZoom"] = SETTINGS.PrintZoom + 10;
     settings["Settings"]["PrintMargin"] = {
-        {"left", TEG_Settings.pagesetupMargin.left},
-        {"top", TEG_Settings.pagesetupMargin.top},
-        {"right", TEG_Settings.pagesetupMargin.right},
-        {"bottom", TEG_Settings.pagesetupMargin.bottom},
+        {"left", SETTINGS.pagesetupMargin.left},
+        {"top", SETTINGS.pagesetupMargin.top},
+        {"right", SETTINGS.pagesetupMargin.right},
+        {"bottom", SETTINGS.pagesetupMargin.bottom},
     };
-    settings["Settings"]["SaveBeforeRunningTools"] = TEG_Settings.bSaveBeforeRunningTools;
-    settings["Settings"]["FileWatchingMode"] = TEG_Settings.iFileWatchingMode;
-    settings["Settings"]["ResetFileWatching"] = TEG_Settings.bResetFileWatching;
-    settings["Settings"]["EscFunction"] = TEG_Settings.iEscFunction;
-    settings["Settings"]["AlwaysOnTop"] = TEG_Settings.bAlwaysOnTop;
-    settings["Settings"]["MinimizeToTray"] = TEG_Settings.bMinimizeToTray;
-    settings["Settings"]["TransparentMode"] = TEG_Settings.bTransparentMode;
+    settings["Settings"]["SaveBeforeRunningTools"] = SETTINGS.SaveBeforeRunningTools;
+    settings["Settings"]["FileWatchingMode"] = SETTINGS.FileWatchingMode;
+    settings["Settings"]["ResetFileWatching"] = SETTINGS.ResetFileWatching;
+    settings["Settings"]["EscFunction"] = SETTINGS.EscFunction;
+    settings["Settings"]["AlwaysOnTop"] = SETTINGS.AlwaysOnTop;
+    settings["Settings"]["MinimizeToTray"] = SETTINGS.MinimizeToTray;
+    settings["Settings"]["TransparentMode"] = SETTINGS.TransparentMode;
 
-    auto ws = std::wstring(TEG_Settings.tchToolbarButtons);
+    auto ws = std::wstring(SETTINGS.tchToolbarButtons);
     settings["Settings"]["ToolbarButtons"] = to_utf8(ws);
 
-    settings["Settings"]["ShowToolbar"] = TEG_Settings.bShowToolbar;
-    settings["Settings"]["ShowStatusbar"] = TEG_Settings.bShowStatusbar;
-    settings["Settings"]["EncodingDlgSize"] = { {"x", TEG_Settings.cxEncodingDlg }, {"y", TEG_Settings.cyEncodingDlg } };
-    settings["Settings"]["RecodeDlgSize"] = { {"x", TEG_Settings.cxRecodeDlg }, {"y", TEG_Settings.cyRecodeDlg } };
-    settings["Settings"]["FileMRUDlgSize"] = { {"x", TEG_Settings.cxFileMRUDlg }, {"y", TEG_Settings.cyFileMRUDlg } };
-    settings["Settings"]["OpenWithDlgSize"] = { {"x", TEG_Settings.cxOpenWithDlg }, {"y", TEG_Settings.cyOpenWithDlg } };
-    settings["Settings"]["FavoritesDlgSize"] = { {"x", TEG_Settings.cxFavoritesDlg }, {"y", TEG_Settings.cyFavoritesDlg } };
-    settings["Settings"]["FindReplaceDlgPos"] = { {"x", TEG_Settings.xFindReplaceDlg }, {"y", TEG_Settings.yFindReplaceDlg } };
+    settings["Settings"]["ShowToolbar"] = SETTINGS.ShowToolbar;
+    settings["Settings"]["ShowStatusbar"] = SETTINGS.ShowStatusbar;
+    settings["Settings"]["EncodingDlgSize"] = { {"x", SETTINGS.cxEncodingDlg }, {"y", SETTINGS.cyEncodingDlg } };
+    settings["Settings"]["RecodeDlgSize"] = { {"x", SETTINGS.cxRecodeDlg }, {"y", SETTINGS.cyRecodeDlg } };
+    settings["Settings"]["FileMRUDlgSize"] = { {"x", SETTINGS.cxFileMRUDlg }, {"y", SETTINGS.cyFileMRUDlg } };
+    settings["Settings"]["OpenWithDlgSize"] = { {"x", SETTINGS.cxOpenWithDlg }, {"y", SETTINGS.cyOpenWithDlg } };
+    settings["Settings"]["FavoritesDlgSize"] = { {"x", SETTINGS.cxFavoritesDlg }, {"y", SETTINGS.cyFavoritesDlg } };
+    settings["Settings"]["FindReplaceDlgPos"] = { {"x", SETTINGS.xFindReplaceDlg }, {"y", SETTINGS.yFindReplaceDlg } };
 
     //jsonfile["Settings2"] = "bar";
     //jsonfile["Recent Files"] = "bar";

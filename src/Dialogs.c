@@ -44,7 +44,7 @@ extern DWORD dwLastIOError;
 extern int NoFileVariables;
 extern WCHAR szCurFile[MAX_PATH+40];
 
-extern T_Settings TEG_Settings;
+extern T_Settings SETTINGS;
 extern T_FLAG FLAG;
 
 //=============================================================================
@@ -485,7 +485,7 @@ INT_PTR CALLBACK OpenWithDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARAM lParam
       {
         LVCOLUMN lvc = { LVCF_FMT|LVCF_TEXT, LVCFMT_LEFT, 0, L"", -1, 0, 0, 0 };
 
-        ResizeDlg_Init(hwnd,TEG_Settings.cxOpenWithDlg,TEG_Settings.cyOpenWithDlg,IDC_RESIZEGRIP3);
+        ResizeDlg_Init(hwnd,SETTINGS.cxOpenWithDlg,SETTINGS.cyOpenWithDlg,IDC_RESIZEGRIP3);
 
         SetWindowLongPtr(hwnd,DWLP_USER,(LONG_PTR)lParam);
 
@@ -508,7 +508,7 @@ INT_PTR CALLBACK OpenWithDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARAM lParam
       DirList_Destroy(GetDlgItem(hwnd,IDC_OPENWITHDIR));
       DeleteBitmapButton(hwnd,IDC_GETOPENWITHDIR);
 
-      ResizeDlg_Destroy(hwnd,&TEG_Settings.cxOpenWithDlg,&TEG_Settings.cyOpenWithDlg);
+      ResizeDlg_Destroy(hwnd,&SETTINGS.cxOpenWithDlg,&SETTINGS.cyOpenWithDlg);
       return FALSE;
 
 
@@ -686,7 +686,7 @@ INT_PTR CALLBACK FavoritesDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARAM lPara
       {
         LVCOLUMN lvc = { LVCF_FMT|LVCF_TEXT, LVCFMT_LEFT, 0, L"", -1, 0, 0, 0 };
 
-        ResizeDlg_Init(hwnd,TEG_Settings.cxFavoritesDlg,TEG_Settings.cyFavoritesDlg,IDC_RESIZEGRIP3);
+        ResizeDlg_Init(hwnd,SETTINGS.cxFavoritesDlg,SETTINGS.cyFavoritesDlg,IDC_RESIZEGRIP3);
 
         SetWindowLongPtr(hwnd,DWLP_USER,(LONG_PTR)lParam);
 
@@ -709,7 +709,7 @@ INT_PTR CALLBACK FavoritesDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARAM lPara
       DirList_Destroy(GetDlgItem(hwnd,IDC_FAVORITESDIR));
       DeleteBitmapButton(hwnd,IDC_GETFAVORITESDIR);
 
-      ResizeDlg_Destroy(hwnd,&TEG_Settings.cxFavoritesDlg,&TEG_Settings.cyFavoritesDlg);
+      ResizeDlg_Destroy(hwnd,&SETTINGS.cxFavoritesDlg,&SETTINGS.cyFavoritesDlg);
       return FALSE;
 
 
@@ -1056,7 +1056,7 @@ INT_PTR CALLBACK FileMRUDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARAM lParam)
 
         SetWindowLongPtr(hwnd,DWLP_USER,(LONG_PTR)lParam);
 
-        ResizeDlg_Init(hwnd,TEG_Settings.cxFileMRUDlg,TEG_Settings.cyFileMRUDlg,IDC_RESIZEGRIP);
+        ResizeDlg_Init(hwnd,SETTINGS.cxFileMRUDlg,SETTINGS.cyFileMRUDlg,IDC_RESIZEGRIP);
 
         ListView_SetImageList(GetDlgItem(hwnd,IDC_FILEMRU),
           (HIMAGELIST)SHGetFileInfo(L"C:\\",0,&shfi,sizeof(SHFILEINFO),SHGFI_SMALLICON | SHGFI_SYSICONINDEX),
@@ -1073,7 +1073,7 @@ INT_PTR CALLBACK FileMRUDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARAM lParam)
         // Update view
         SendMessage(hwnd,WM_COMMAND,MAKELONG(0x00A0,1),0);
 
-        if (TEG_Settings.bSaveRecentFiles)
+        if (SETTINGS.SaveRecentFiles)
           CheckDlgButton(hwnd,IDC_SAVEMRU,BST_CHECKED);
 
         CenterDlgInParent(hwnd);
@@ -1097,9 +1097,9 @@ INT_PTR CALLBACK FileMRUDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARAM lParam)
         RemoveProp(hwnd,L"it");
         GlobalFree(lpit);
 
-        TEG_Settings.bSaveRecentFiles = (IsDlgButtonChecked(hwnd,IDC_SAVEMRU)) ? 1 : 0;
+        SETTINGS.SaveRecentFiles = (IsDlgButtonChecked(hwnd,IDC_SAVEMRU)) ? 1 : 0;
 
-        ResizeDlg_Destroy(hwnd,&TEG_Settings.cxFileMRUDlg,&TEG_Settings.cyFileMRUDlg);
+        ResizeDlg_Destroy(hwnd,&SETTINGS.cxFileMRUDlg,&SETTINGS.cyFileMRUDlg);
       }
       return FALSE;
 
@@ -1369,8 +1369,8 @@ INT_PTR CALLBACK ChangeNotifyDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARAM lP
   switch(umsg)
   {
     case WM_INITDIALOG:
-      CheckRadioButton(hwnd,100,102,100+TEG_Settings.iFileWatchingMode);
-      if (TEG_Settings.bResetFileWatching)
+      CheckRadioButton(hwnd,100,102,100+SETTINGS.FileWatchingMode);
+      if (SETTINGS.ResetFileWatching)
         CheckDlgButton(hwnd,103,BST_CHECKED);
       CenterDlgInParent(hwnd);
       return TRUE;
@@ -1380,12 +1380,12 @@ INT_PTR CALLBACK ChangeNotifyDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARAM lP
       {
         case IDOK:
           if (IsDlgButtonChecked(hwnd,100) == BST_CHECKED)
-            TEG_Settings.iFileWatchingMode = 0;
+            SETTINGS.FileWatchingMode = 0;
           else if (IsDlgButtonChecked(hwnd,101) == BST_CHECKED)
-            TEG_Settings.iFileWatchingMode = 1;
+            SETTINGS.FileWatchingMode = 1;
           else
-            TEG_Settings.iFileWatchingMode = 2;
-          TEG_Settings.bResetFileWatching = (IsDlgButtonChecked(hwnd,103) == BST_CHECKED) ? TRUE : FALSE;
+            SETTINGS.FileWatchingMode = 2;
+          SETTINGS.ResetFileWatching = (IsDlgButtonChecked(hwnd,103) == BST_CHECKED) ? TRUE : FALSE;
           EndDialog(hwnd,IDOK);
           break;
 
@@ -1540,10 +1540,10 @@ INT_PTR CALLBACK WordWrapSettingsDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
           SendDlgItemMessage(hwnd,100+i,CB_SETEXTENDEDUI,TRUE,0);
         }
 
-        SendDlgItemMessage(hwnd,100,CB_SETCURSEL,(WPARAM)TEG_Settings.iWordWrapIndent,0);
-        SendDlgItemMessage(hwnd,101,CB_SETCURSEL,(WPARAM)(TEG_Settings.bShowWordWrapSymbols) ? TEG_Settings.iWordWrapSymbols%10 : 0,0);
-        SendDlgItemMessage(hwnd,102,CB_SETCURSEL,(WPARAM)(TEG_Settings.bShowWordWrapSymbols) ? ((TEG_Settings.iWordWrapSymbols%100)-(TEG_Settings.iWordWrapSymbols%10))/10 : 0,0);
-        SendDlgItemMessage(hwnd,103,CB_SETCURSEL,(WPARAM)TEG_Settings.iWordWrapMode,0);
+        SendDlgItemMessage(hwnd,100,CB_SETCURSEL,(WPARAM)SETTINGS.iWordWrapIndent,0);
+        SendDlgItemMessage(hwnd,101,CB_SETCURSEL,(WPARAM)(SETTINGS.ShowWordWrapSymbols) ? SETTINGS.iWordWrapSymbols%10 : 0,0);
+        SendDlgItemMessage(hwnd,102,CB_SETCURSEL,(WPARAM)(SETTINGS.ShowWordWrapSymbols) ? ((SETTINGS.iWordWrapSymbols%100)-(SETTINGS.iWordWrapSymbols%10))/10 : 0,0);
+        SendDlgItemMessage(hwnd,103,CB_SETCURSEL,(WPARAM)SETTINGS.WordWrapMode,0);
 
         CenterDlgInParent(hwnd);
 
@@ -1561,18 +1561,18 @@ INT_PTR CALLBACK WordWrapSettingsDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
             int iSel, iSel2;
 
             iSel = (int)SendDlgItemMessage(hwnd,100,CB_GETCURSEL,0,0);
-            TEG_Settings.iWordWrapIndent = iSel;
+            SETTINGS.iWordWrapIndent = iSel;
 
-            TEG_Settings.bShowWordWrapSymbols = FALSE;
+            SETTINGS.ShowWordWrapSymbols = FALSE;
             iSel = (int)SendDlgItemMessage(hwnd,101,CB_GETCURSEL,0,0);
             iSel2 = (int)SendDlgItemMessage(hwnd,102,CB_GETCURSEL,0,0);
             if (iSel > 0 || iSel2 > 0) {
-                TEG_Settings.bShowWordWrapSymbols = TRUE;
-              TEG_Settings.iWordWrapSymbols = iSel + iSel2*10;
+                SETTINGS.ShowWordWrapSymbols = TRUE;
+              SETTINGS.iWordWrapSymbols = iSel + iSel2*10;
             }
 
             iSel = (int)SendDlgItemMessage(hwnd,103,CB_GETCURSEL,0,0);
-            TEG_Settings.iWordWrapMode = iSel;
+            SETTINGS.WordWrapMode = iSel;
 
             EndDialog(hwnd,IDOK);
           }
@@ -1638,7 +1638,7 @@ INT_PTR CALLBACK LongLineSettingsDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
         SetDlgItemInt(hwnd,100,*piNumber,FALSE);
         SendDlgItemMessage(hwnd,100,EM_LIMITTEXT,15,0);
 
-        if (TEG_Settings.iLongLineMode == EDGE_LINE)
+        if (SETTINGS.LongLineMode == EDGE_LINE)
           CheckRadioButton(hwnd,101,102,101);
         else
           CheckRadioButton(hwnd,101,102,102);
@@ -1664,7 +1664,7 @@ INT_PTR CALLBACK LongLineSettingsDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARA
           {
             *piNumber = iNewNumber;
 
-            TEG_Settings.iLongLineMode = (IsDlgButtonChecked(hwnd,101)) ? EDGE_LINE : EDGE_BACKGROUND;
+            SETTINGS.LongLineMode = (IsDlgButtonChecked(hwnd,101)) ? EDGE_LINE : EDGE_BACKGROUND;
 
             EndDialog(hwnd,IDOK);
           }
@@ -1747,7 +1747,7 @@ INT_PTR CALLBACK TabSettingsDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARAM lPa
         if (bTabIndents)
           CheckDlgButton(hwnd,103,BST_CHECKED);
 
-        if (TEG_Settings.bBackspaceUnindents)
+        if (SETTINGS.BackspaceUnindents)
           CheckDlgButton(hwnd,104,BST_CHECKED);
 
         CenterDlgInParent(hwnd);
@@ -1777,7 +1777,7 @@ INT_PTR CALLBACK TabSettingsDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LPARAM lPa
 
             bTabIndents = (IsDlgButtonChecked(hwnd,103)) ? TRUE : FALSE;
 
-            TEG_Settings.bBackspaceUnindents = (IsDlgButtonChecked(hwnd,104)) ? TRUE : FALSE;
+            SETTINGS.BackspaceUnindents = (IsDlgButtonChecked(hwnd,104)) ? TRUE : FALSE;
 
             EndDialog(hwnd,IDOK);
           }
@@ -1858,16 +1858,16 @@ INT_PTR CALLBACK SelectDefEncodingDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LPAR
 
         Encoding_AddToComboboxEx(GetDlgItem(hwnd,IDC_ENCODINGLIST),pdd->idEncoding,0);
 
-        if (TEG_Settings.bSkipUnicodeDetection)
+        if (SETTINGS.SkipUnicodeDetection)
           CheckDlgButton(hwnd,IDC_NOUNICODEDETECTION,BST_CHECKED);
 
-        if (TEG_Settings.bLoadASCIIasUTF8)
+        if (SETTINGS.LoadASCIIasUTF8)
           CheckDlgButton(hwnd,IDC_ASCIIASUTF8,BST_CHECKED);
 
-        if (TEG_Settings.bLoadNFOasOEM)
+        if (SETTINGS.LoadNFOasOEM)
           CheckDlgButton(hwnd,IDC_NFOASOEM,BST_CHECKED);
 
-        if (TEG_Settings.bNoEncodingTags)
+        if (SETTINGS.NoEncodingTags)
           CheckDlgButton(hwnd,IDC_ENCODINGFROMFILEVARS,BST_CHECKED);
 
         CenterDlgInParent(hwnd);
@@ -1880,10 +1880,10 @@ INT_PTR CALLBACK SelectDefEncodingDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LPAR
       {
         case IDOK: {
             if (Encoding_GetFromComboboxEx(GetDlgItem(hwnd,IDC_ENCODINGLIST),&pdd->idEncoding)) {
-              TEG_Settings.bSkipUnicodeDetection = (IsDlgButtonChecked(hwnd,IDC_NOUNICODEDETECTION) == BST_CHECKED) ? 1 : 0;
-              TEG_Settings.bLoadASCIIasUTF8 = (IsDlgButtonChecked(hwnd,IDC_ASCIIASUTF8) == BST_CHECKED) ? 1 : 0;
-              TEG_Settings.bLoadNFOasOEM = (IsDlgButtonChecked(hwnd,IDC_NFOASOEM) == BST_CHECKED) ? 1 : 0;
-              TEG_Settings.bNoEncodingTags = (IsDlgButtonChecked(hwnd,IDC_ENCODINGFROMFILEVARS) == BST_CHECKED) ? 1 : 0;
+              SETTINGS.SkipUnicodeDetection = (IsDlgButtonChecked(hwnd,IDC_NOUNICODEDETECTION) == BST_CHECKED) ? 1 : 0;
+              SETTINGS.LoadASCIIasUTF8 = (IsDlgButtonChecked(hwnd,IDC_ASCIIASUTF8) == BST_CHECKED) ? 1 : 0;
+              SETTINGS.LoadNFOasOEM = (IsDlgButtonChecked(hwnd,IDC_NFOASOEM) == BST_CHECKED) ? 1 : 0;
+              SETTINGS.NoEncodingTags = (IsDlgButtonChecked(hwnd,IDC_ENCODINGFROMFILEVARS) == BST_CHECKED) ? 1 : 0;
               EndDialog(hwnd,IDOK);
             }
             else
@@ -2066,8 +2066,8 @@ BOOL SelectEncodingDlg(HWND hwnd,int *pidREncoding)
 
   dd.bRecodeOnly = FALSE;
   dd.idEncoding = *pidREncoding;
-  dd.cxDlg = TEG_Settings.cxEncodingDlg;
-  dd.cyDlg = TEG_Settings.cyEncodingDlg;
+  dd.cxDlg = SETTINGS.cxEncodingDlg;
+  dd.cyDlg = SETTINGS.cyEncodingDlg;
 
   iResult = ThemedDialogBoxParam(
               g_hInstance,
@@ -2076,8 +2076,8 @@ BOOL SelectEncodingDlg(HWND hwnd,int *pidREncoding)
               SelectEncodingDlgProc,
               (LPARAM)&dd);
 
-  TEG_Settings.cxEncodingDlg = dd.cxDlg;
-  TEG_Settings.cyEncodingDlg = dd.cyDlg;
+  SETTINGS.cxEncodingDlg = dd.cxDlg;
+  SETTINGS.cyEncodingDlg = dd.cyDlg;
 
   if (iResult == IDOK) {
     *pidREncoding = dd.idEncoding;
@@ -2101,8 +2101,8 @@ BOOL RecodeDlg(HWND hwnd,int *pidREncoding)
 
   dd.bRecodeOnly = TRUE;
   dd.idEncoding = *pidREncoding;
-  dd.cxDlg = TEG_Settings.cxRecodeDlg;
-  dd.cyDlg = TEG_Settings.cyRecodeDlg;
+  dd.cxDlg = SETTINGS.cxRecodeDlg;
+  dd.cyDlg = SETTINGS.cyRecodeDlg;
 
   iResult = ThemedDialogBoxParam(
               g_hInstance,
@@ -2111,8 +2111,8 @@ BOOL RecodeDlg(HWND hwnd,int *pidREncoding)
               SelectEncodingDlgProc,
               (LPARAM)&dd);
 
-  TEG_Settings.cxRecodeDlg = dd.cxDlg;
-  TEG_Settings.cyRecodeDlg = dd.cyDlg;
+  SETTINGS.cxRecodeDlg = dd.cxDlg;
+  SETTINGS.cyRecodeDlg = dd.cyDlg;
 
   if (iResult == IDOK) {
     *pidREncoding = dd.idEncoding;
@@ -2154,10 +2154,10 @@ INT_PTR CALLBACK SelectDefLineEndingDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LP
         SendDlgItemMessage(hwnd,100,CB_SETCURSEL,(WPARAM)*piOption,0);
         SendDlgItemMessage(hwnd,100,CB_SETEXTENDEDUI,TRUE,0);
 
-        if (TEG_Settings.bFixLineEndings)
+        if (SETTINGS.FixLineEndings)
           CheckDlgButton(hwnd,IDC_CONSISTENTEOLS,BST_CHECKED);
 
-        if (TEG_Settings.bAutoStripBlanks)
+        if (SETTINGS.AutoStripBlanks)
           CheckDlgButton(hwnd,IDC_AUTOSTRIPBLANKS, BST_CHECKED);
 
         CenterDlgInParent(hwnd);
@@ -2170,8 +2170,8 @@ INT_PTR CALLBACK SelectDefLineEndingDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LP
       {
         case IDOK: {
             *piOption = (int)SendDlgItemMessage(hwnd,100,CB_GETCURSEL,0,0);
-            TEG_Settings.bFixLineEndings = (IsDlgButtonChecked(hwnd,IDC_CONSISTENTEOLS) == BST_CHECKED) ? 1 : 0;
-            TEG_Settings.bAutoStripBlanks = (IsDlgButtonChecked(hwnd,IDC_AUTOSTRIPBLANKS) == BST_CHECKED) ? 1 : 0;
+            SETTINGS.FixLineEndings = (IsDlgButtonChecked(hwnd,IDC_CONSISTENTEOLS) == BST_CHECKED) ? 1 : 0;
+            SETTINGS.AutoStripBlanks = (IsDlgButtonChecked(hwnd,IDC_AUTOSTRIPBLANKS) == BST_CHECKED) ? 1 : 0;
             EndDialog(hwnd,IDOK);
           }
           break;
