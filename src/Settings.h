@@ -8,16 +8,16 @@ public:
 	void loadFlags();
 
 private:
-	bool findIniFile();
+	bool findFile();
 	bool testIniFile();
 	bool createIniFile();
-	bool createIniFileEx(const std::wstring& file);
+	bool createIniFileEx(std::wstring_view file);
 	bool loadSettings();
 	bool saveSettings(bool saveSettingsNow);
-	bool checkIniFile(std::wstring& file, const std::wstring& module);
-	bool checkIniFileRedirect(std::wstring& file, const std::wstring& module);
+	bool checkFile(std::wstring& file, std::wstring_view module);
+	bool checkFileRedirect(std::wstring& file, std::wstring_view module);
 
-	std::wstring _iniFile;
+	std::wstring _file;
 	std::wstring _iniFile2;
 };
 

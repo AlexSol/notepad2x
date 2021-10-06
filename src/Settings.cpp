@@ -1,12 +1,19 @@
 #include "Settings.h"
 #include "precheader.h"
 
-#include "Notepad2.h"
-#include "Config.h"
 
-extern "C" void ExpandEnvironmentStringsEx(LPWSTR lpSrc, DWORD dwSrc);
+#include "Config.h"
+#include "utility.h"
+
+extern "C" {
+#include "Notepad2.h"
+}
+
 extern "C" int  Encoding_MapIniSetting(BOOL, int);
 extern "C" void PathRelativeToApp(LPWSTR, LPWSTR, int, BOOL, BOOL, BOOL);
+extern "C" void GetWinInfo2(HWND hwnd, PTR_WININFO  wi);
+
+std::wstring ExpandEnvironment(const std::wstring& path);
 
 typedef struct _editfindreplace
 {
@@ -29,14 +36,6 @@ typedef struct _editfindreplace
 
 } EDITFINDREPLACE, * LPEDITFINDREPLACE, * LPCEDITFINDREPLACE;
 
-typedef struct _wi
-{
-    int x;
-    int y;
-    int cx;
-    int cy;
-    int max;
-} WININFO;
 extern "C" WININFO wi;
 extern "C" HWND  hwndMain;
 
@@ -49,6 +48,8 @@ extern "C" T_FLAG FLAG;
 static auto fileNameSettings = L"Notepad2.ini";
 static auto fileNameSettings_JSON = L"Notepad2x.json";
 
+extern "C" WCHAR     g_wchAppUserModelID[32];
+
 // encoding function
 std::string to_utf8(std::wstring& wide_string)
 {
@@ -58,11 +59,12 @@ std::string to_utf8(std::wstring& wide_string)
 
 void Settings::load()
 {
-    //saveSettings(true);
-    //findIniFile();
-    //testIniFile();
-    //createIniFile();
-    loadSettings();
+    saveSettings(true);
+    findFile();
+    testIniFile();
+    createIniFile();
+    
+    //loadSettings();
 }
 
 void Settings::loadFlags()
@@ -72,9 +74,73 @@ void Settings::loadFlags()
 
     json jsonfile;;
     iFile >> jsonfile;
+    auto Settings2 = jsonfile["Settings2"];
+
+    if (!FLAG.ReuseWindow && !FLAG.NoReuseWindow) {
+        if (Settings2["ReuseWindow"].is_null()) {
+            FLAG.NoReuseWindow = 1;
+        }
+        if (Settings2["SingleFileInstance"].is_null() == false) {
+            FLAG.SingleFileInstance = 1;
+        }
+    }
+
+    if (FLAG.MultiFileArg == 0) {
+        if (Settings2["SingleFileInstance"].is_null() == false) {
+            FLAG.MultiFileArg = 2;
+        }
+    }
+
+    if (Settings2["RelativeFileMRU"].is_null() == false) { //default 1
+        FLAG.RelativeFileMRU = 1;
+    }
+
+    if (Settings2["PortableMyDocs"].is_null() == false || FLAG.RelativeFileMRU) {
+        FLAG.PortableMyDocs = 1;
+    }
+
+    if (Settings2["NoFadeHidden"].is_null() == false) {
+        FLAG.NoFadeHidden = 1;
+    }
+
+    //if (auto node = Settings2["ToolbarLook"]; node.is_null() == false) {
+    //    FLAG.ToolbarLook = 2;
+    //}
+    FLAG.ToolbarLook = 2;
+
+    if (Settings2["SimpleIndentGuides"].is_null() == false) {
+        FLAG.SimpleIndentGuides = 1;
+    }
+
+    if (Settings2["NoHTMLGuess"].is_null() == false) {
+        FLAG.NoHTMLGuess = 1;
+    }
+
+    if (Settings2["NoCGIGuess"].is_null() == false) {
+        FLAG.NoCGIGuess = 1;
+    }
+
+    if (Settings2["NoFileVariables"].is_null() == false) {
+        FLAG.NoFileVariables = 1;
+    }
+
+    if (lstrlen(g_wchAppUserModelID) == 0) {
+        if (auto node = Settings2["ShellAppUserModelID"]; node.is_null()) {
+            lstrcpyn(g_wchAppUserModelID, L"(default)", lstrlen(L"(default)") + 1);
+        }
+        else{
+           // lstrcpyn(g_wchAppUserModelID, node.get<std::string>().c_str(), node.get<std::string>().length());
+        }
+    }
+
+    if (FLAG.UseSystemMRU == 0) {
+        if (Settings2["ShellUseSystemMRU"].is_null() == false) {
+            FLAG.UseSystemMRU = 2;
+        }
+    }
 }
 
-bool Settings::findIniFile()
+bool Settings::findFile()
 {
     int bFound = 0;
     std::wstring tchTest;
@@ -84,17 +150,17 @@ bool Settings::findIniFile()
 
     GetModuleFileName(NULL, tchModule.data(), MAX_PATH);
 
-    if (!_iniFile.empty()) {
-        if (lstrcmpi(_iniFile.c_str(), L"*?") == 0)
+    if (!_file.empty()) {
+        if (lstrcmpi(_file.c_str(), L"*?") == 0)
             return false;
         else {
-            if (!checkIniFile(_iniFile, tchModule)) {
-                ExpandEnvironmentStringsEx(_iniFile.data(), MAX_PATH);
-                if (PathIsRelative(_iniFile.data())) {
+            if (!checkFile(_file, tchModule)) {
+                _file = ExpandEnvironment(_file);
+                if (PathIsRelative(_file.data())) {
                     lstrcpy(tchTest.data(), tchModule.data());
                     PathRemoveFileSpec(tchTest.data());
-                    PathAppend(tchTest.data(), _iniFile.data());
-                    lstrcpy(_iniFile.data(), tchTest.data());
+                    PathAppend(tchTest.data(), _file.data());
+                    lstrcpy(_file.data(), tchTest.data());
                 }
             }
         }
@@ -103,22 +169,22 @@ bool Settings::findIniFile()
 
     lstrcpy(tchTest.data(), PathFindFileName(tchModule.data()));
     PathRenameExtension(tchTest.data(), L".ini");
-    bFound = checkIniFile(tchTest, tchModule);
+    bFound = checkFile(tchTest, tchModule);
 
     if (!bFound) {
         lstrcpy(tchTest.data(), fileNameSettings);
-        bFound = checkIniFile(tchTest, tchModule);
+        bFound = checkFile(tchTest, tchModule);
     }
 
     if (bFound) {
         // allow two redirections: administrator -> user -> custom
-        if (checkIniFileRedirect(tchTest, tchModule))
-            checkIniFileRedirect(tchTest, tchModule);
-        _iniFile = tchTest;
+        if (checkFileRedirect(tchTest, tchModule))
+            checkFileRedirect(tchTest, tchModule);
+        _file = tchTest;
     }
     else {
-        lstrcpy(_iniFile.data(), tchModule.data());
-        PathRenameExtension(_iniFile.data(), L".ini");
+        lstrcpy(_file.data(), tchModule.data());
+        PathRenameExtension(_file.data(), L".ini");
     }
 
     return true;
@@ -127,30 +193,30 @@ bool Settings::findIniFile()
 bool Settings::testIniFile()
 {
     _iniFile2.resize(MAX_PATH);
-    if (lstrcmpi(_iniFile.c_str(), L"*?") == 0) {
+    if (lstrcmpi(_file.c_str(), L"*?") == 0) {
         lstrcpy(_iniFile2.data(), L"");
-        lstrcpy(_iniFile.data(), L"");
+        lstrcpy(_file.data(), L"");
         return false;
     }
 
-    if (PathIsDirectory(_iniFile.data()) || *CharPrev(_iniFile.data(), &_iniFile[_iniFile.size()]) == L'\\') {
+    if (PathIsDirectory(_file.data()) || *CharPrev(_file.data(), &_file[_file.size()]) == L'\\') {
         std::wstring module;
         module.resize(MAX_PATH);
         GetModuleFileName(NULL, module.data(), module.size());
-        PathAppend(_iniFile.data(), PathFindFileName(module.data()));
-        PathRenameExtension(_iniFile.data(), L".ini");
-        if (!PathFileExists(_iniFile.data())) {
-            lstrcpy(PathFindFileName(_iniFile.data()), L"Notepad2.ini");
-            if (!PathFileExists(_iniFile.data())) {
-                lstrcpy(PathFindFileName(_iniFile.data()), PathFindFileName(module.data()));
-                PathRenameExtension(_iniFile.data(), L".ini");
+        PathAppend(_file.data(), PathFindFileName(module.data()));
+        PathRenameExtension(_file.data(), L".ini");
+        if (!PathFileExists(_file.data())) {
+            lstrcpy(PathFindFileName(_file.data()), L"Notepad2.ini");
+            if (!PathFileExists(_file.data())) {
+                lstrcpy(PathFindFileName(_file.data()), PathFindFileName(module.data()));
+                PathRenameExtension(_file.data(), L".ini");
             }
         }
     }
 
-    if (!PathFileExists(_iniFile.data()) || PathIsDirectory(_iniFile.data())) {
-        lstrcpy(_iniFile2.data(), _iniFile.data());
-        lstrcpy(_iniFile.data(), L"");
+    if (!PathFileExists(_file.data()) || PathIsDirectory(_file.data())) {
+        lstrcpy(_iniFile2.data(), _file.data());
+        lstrcpy(_file.data(), L"");
         return false;
     }
     else
@@ -159,10 +225,10 @@ bool Settings::testIniFile()
 
 bool Settings::createIniFile()
 {
-    return createIniFileEx(_iniFile);
+    return createIniFileEx(_file);
 }
 
-bool Settings::createIniFileEx(const std::wstring& file)
+bool Settings::createIniFileEx(std::wstring_view file)
 {
     if (file.size()) {
         WCHAR* pwchTail;
@@ -303,17 +369,7 @@ bool Settings::saveSettings(bool saveSettingsNow)
     //jsonfile["Custom Colors"] = "bar";
 
     if (saveSettingsNow){
-        WINDOWPLACEMENT wndpl;
-
-        //GetWindowPlacement
-        wndpl.length = sizeof(WINDOWPLACEMENT);
-        GetWindowPlacement(hwndMain, &wndpl);
-
-        wi.x = wndpl.rcNormalPosition.left;
-        wi.y = wndpl.rcNormalPosition.top;
-        wi.cx = wndpl.rcNormalPosition.right - wndpl.rcNormalPosition.left;
-        wi.cy = wndpl.rcNormalPosition.bottom - wndpl.rcNormalPosition.top;
-        wi.max = (IsZoomed(hwndMain) || (wndpl.flags & WPF_RESTORETOMAXIMIZED));
+        GetWinInfo2(hwndMain, &wi);
     }
         
     if(settings["Settings2"]["StickyWindowPosition"].is_null()){
@@ -342,61 +398,58 @@ bool Settings::saveSettings(bool saveSettingsNow)
     return false;
 }
 
-bool Settings::checkIniFile(std::wstring& file, const std::wstring& module)
+bool Settings::checkFile(std::wstring& file, std::wstring_view module)
 {
-    std::wstring fileExpanded;
+    namespace fs = std::filesystem;
+
     std::wstring build;
-    fileExpanded.resize(MAX_PATH);
     build.resize(MAX_PATH);
 
-    ExpandEnvironmentStrings(file.c_str(), fileExpanded.data(), fileExpanded.size());
+    std::wstring fileExpanded = ExpandEnvironment(file);
 
     if (PathIsRelative(fileExpanded.data())) {
         // program directory
         build = module;
         lstrcpy(PathFindFileName(build.c_str()), fileExpanded.data());
-        if (PathFileExists(build.data())) {
-            lstrcpy(file.data(), build.data());
+        if (fs::exists(build)) {
+            file = build;
             return true;
         }
         // %appdata%
         if (S_OK == SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, SHGFP_TYPE_CURRENT, build.data())) {
             PathAppend(build.data(), fileExpanded.data());
-            if (PathFileExists(build.data())) {
-                lstrcpy(file.data(), build.data());
+            if (fs::exists(build.data())) {
+                file = build;
                 return true;
             }
         }
         // general
         if (SearchPath(NULL, fileExpanded.data(), NULL, MAX_PATH, build.data(), NULL)) {
-            lstrcpy(file.data(), build.data());
+            file = build;
             return true;
         }
-    }
-
-    else if (PathFileExists(fileExpanded.data())) {
-        lstrcpy(file.data(), fileExpanded.data());
+    }else if (fs::exists(fileExpanded)) {
+        file = fileExpanded;
         return true;
     }
 
     return false;
 }
 
-bool Settings::checkIniFileRedirect(std::wstring& file, const std::wstring& module)
+bool Settings::checkFileRedirect(std::wstring& file, std::wstring_view module)
 {
     std::wstring tch;
     tch.resize(MAX_PATH);
     if (GetPrivateProfileString(L"Notepad2", fileNameSettings, L"", tch.data(), tch.size(), file.data())) {
-        if (checkIniFile(tch, module)) {
-            lstrcpy(file.data(), tch.c_str());
+        if (checkFile(tch, module)) {
+            file = tch;
             return true;
         }
         else {
-            WCHAR tchFileExpanded[MAX_PATH];
-            ExpandEnvironmentStrings(tch.data(), tchFileExpanded, MAX_PATH);
-            if (PathIsRelative(tchFileExpanded)) {
-                lstrcpy(file.data(), module.c_str());
-                lstrcpy(PathFindFileName(file.data()), tchFileExpanded);
+            std::wstring tchFileExpanded = ExpandEnvironment(tch);
+            if (PathIsRelative(tchFileExpanded.c_str())) {
+                file = module;
+                lstrcpy(PathFindFileName(file.data()), tchFileExpanded.c_str());
                 return true;
             }
             else {
@@ -406,4 +459,12 @@ bool Settings::checkIniFileRedirect(std::wstring& file, const std::wstring& modu
         }
     }
     return false;
+}
+
+std::wstring ExpandEnvironment(const std::wstring& path)
+{
+    WCHAR szBuf[312];
+    if (::ExpandEnvironmentStrings(path.c_str(), szBuf, 312)) {
+        return std::wstring{ szBuf };
+    }
 }

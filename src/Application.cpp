@@ -100,8 +100,8 @@ int Application::init()
     TestIniFile();
     CreateIniFile();
 
+    //_settings.load();
     _settings.loadFlags();
-    LoadFlags();
 
     // set AppUserModelID
     PrivateSetCurrentProcessExplicitAppUserModelID(g_wchAppUserModelID);

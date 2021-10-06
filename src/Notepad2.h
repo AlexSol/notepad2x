@@ -18,6 +18,8 @@
 *
 ******************************************************************************/
 
+#ifndef __NOTEPAD2_H__
+#define __NOTEPAD2_H__
 
 
 //==== Main Window ============================================================
@@ -44,6 +46,14 @@ typedef struct np2params {
 
 } NP2PARAMS, *LPNP2PARAMS;
 
+typedef struct _wi
+{
+    int x;
+    int y;
+    int cx;
+    int cy;
+    int max;
+} WININFO, *PTR_WININFO;
 
 //==== Toolbar Style ==========================================================
 #define WS_TOOLBAR (WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | \
@@ -111,7 +121,6 @@ void CALLBACK PasteBoardTimer(HWND,UINT,UINT_PTR,DWORD);
 void LoadSettings();
 void SaveSettings(BOOL);
 void ParseCommandLine();
-void LoadFlags();
 int  CheckIniFile(LPWSTR,LPCWSTR);
 int  CheckIniFileRedirect(LPWSTR,LPCWSTR);
 int  FindIniFile();
@@ -142,5 +151,18 @@ LRESULT MsgCommand(HWND,WPARAM,LPARAM);
 LRESULT MsgNotify(HWND,WPARAM,LPARAM);
 
 
+void GetWinInfo2(HWND hwnd, PTR_WININFO wi);
+
+void SetWindowPosition();
+
+void CheckPasteBoardOption();
+void CheckLexerFromCommandLine();
+void CheckStartAsTrayIcon(int nCmdShow);
+void CheckNewFromClipboard();
+void MatchText();
+void OpenFromDirectoryOrFileCommandLine();
+HWND CreateWindowNotepad(HINSTANCE hInstance);
+
+#endif /* __NOTEPAD2_H__ */
 
 ///   End of Notepad2.h   \\\

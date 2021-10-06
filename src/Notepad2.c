@@ -121,17 +121,7 @@ DWORD     dwFileCheckInverval;
 DWORD     dwAutoReloadTimeout;
 BOOL      bTransparentModeAvailable;
 
-
 T_Settings SETTINGS;
-
-typedef struct _wi
-{
-  int x;
-  int y;
-  int cx;
-  int cy;
-  int max;
-} WININFO;
 
 WININFO wi;
 BOOL    bStickyWinPos;
@@ -479,169 +469,36 @@ void __stdcall FoldAltArrow( int key, int mode )
 //
 HWND InitInstance(HINSTANCE hInstance,LPSTR pszCmdLine,int nCmdShow)
 {
+    SetWindowPosition();
+    hwndMain = CreateWindowNotepad(hInstance);
 
-  RECT rc = { wi.x, wi.y, wi.x+wi.cx, wi.y+wi.cy };
-  RECT rc2;
-  MONITORINFO mi;
-
-  HMONITOR hMonitor = MonitorFromRect(&rc,MONITOR_DEFAULTTONEAREST);
-  mi.cbSize = sizeof(mi);
-  GetMonitorInfo(hMonitor,&mi);
-
-  if (FLAG.DefaultPos == 1) {
-    wi.x = wi.y = wi.cx = wi.cy = CW_USEDEFAULT;
-    wi.max = 0;
-  }
-
-  else if (FLAG.DefaultPos >= 4) {
-    SystemParametersInfo(SPI_GETWORKAREA,0,&rc,0);
-    if (FLAG.DefaultPos & 8)
-      wi.x = (rc.right - rc.left) / 2;
-    else
-      wi.x = rc.left;
-    wi.cx = rc.right - rc.left;
-    if (FLAG.DefaultPos & (4|8))
-      wi.cx /= 2;
-    if (FLAG.DefaultPos & 32)
-      wi.y = (rc.bottom - rc.top) / 2;
-    else
-      wi.y = rc.top;
-    wi.cy = rc.bottom - rc.top;
-    if (FLAG.DefaultPos & (16|32))
-      wi.cy /= 2;
-    if (FLAG.DefaultPos & 64) {
-      wi.x = rc.left;
-      wi.y = rc.top;
-      wi.cx = rc.right - rc.left;
-      wi.cy = rc.bottom - rc.top;
+    if (wi.max) {
+        nCmdShow = SW_SHOWMAXIMIZED;
     }
-    if (FLAG.DefaultPos & 128) {
-      wi.x += (FLAG.DefaultPos & 8) ? 4 : 8;
-      wi.cx -= (FLAG.DefaultPos & (4|8)) ? 12 : 16;
-      wi.y += (FLAG.DefaultPos & 32) ? 4 : 8;
-      wi.cy -= (FLAG.DefaultPos & (16|32)) ? 12 : 16;
+
+    if ((SETTINGS.AlwaysOnTop || FLAG.AlwaysOnTop == 2) && FLAG.AlwaysOnTop != 1) {
+        SetWindowPos(hwndMain, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
     }
-  }
 
-  else if (FLAG.DefaultPos == 2 || FLAG.DefaultPos == 3 ||
-      wi.x == CW_USEDEFAULT || wi.y == CW_USEDEFAULT ||
-      wi.cx == CW_USEDEFAULT || wi.cy == CW_USEDEFAULT) {
-
-    // default window position
-    SystemParametersInfo(SPI_GETWORKAREA,0,&rc,0);
-    wi.y = rc.top + 16;
-    wi.cy = rc.bottom - rc.top - 32;
-    wi.cx = min(rc.right - rc.left - 32,wi.cy);
-    wi.x = (FLAG.DefaultPos == 3) ? rc.left + 16 : rc.right - wi.cx - 16;
-  }
-
-  else {
-
-    // fit window into working area of current monitor
-    wi.x += (mi.rcWork.left - mi.rcMonitor.left);
-    wi.y += (mi.rcWork.top - mi.rcMonitor.top);
-    if (wi.x < mi.rcWork.left)
-      wi.x = mi.rcWork.left;
-    if (wi.y < mi.rcWork.top)
-      wi.y = mi.rcWork.top;
-    if (wi.x + wi.cx > mi.rcWork.right) {
-      wi.x -= (wi.x + wi.cx - mi.rcWork.right);
-      if (wi.x < mi.rcWork.left)
-        wi.x = mi.rcWork.left;
-      if (wi.x + wi.cx > mi.rcWork.right)
-        wi.cx = mi.rcWork.right - wi.x;
+    if (SETTINGS.TransparentMode) {
+        SetWindowTransparentMode(hwndMain, TRUE);
     }
-    if (wi.y + wi.cy > mi.rcWork.bottom) {
-      wi.y -= (wi.y + wi.cy - mi.rcWork.bottom);
-      if (wi.y < mi.rcWork.top)
-        wi.y = mi.rcWork.top;
-      if (wi.y + wi.cy > mi.rcWork.bottom)
-        wi.cy = mi.rcWork.bottom - wi.y;
-    }
-    SetRect(&rc,wi.x,wi.y,wi.x+wi.cx,wi.y+wi.cy);
-    if (!IntersectRect(&rc2,&rc,&mi.rcWork)) {
-      wi.y = mi.rcWork.top + 16;
-      wi.cy = mi.rcWork.bottom - mi.rcWork.top - 32;
-      wi.cx = min(mi.rcWork.right - mi.rcWork.left - 32,wi.cy);
-      wi.x = mi.rcWork.right - wi.cx - 16;
-    }
-  }
-
-  hwndMain = CreateWindowEx(
-               0,
-               wchWndClass,
-               L"Notepad2",
-               WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-               wi.x,
-               wi.y,
-               wi.cx,
-               wi.cy,
-               NULL,
-               NULL,
-               hInstance,
-               NULL);
-
-  if (wi.max)
-    nCmdShow = SW_SHOWMAXIMIZED;
-
-  if ((SETTINGS.AlwaysOnTop || FLAG.AlwaysOnTop == 2) && FLAG.AlwaysOnTop != 1)
-    SetWindowPos(hwndMain,HWND_TOPMOST,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE);
-
-  if (SETTINGS.TransparentMode)
-    SetWindowTransparentMode(hwndMain,TRUE);
 
   // Current file information -- moved in front of ShowWindow()
   FileLoad(TRUE,TRUE,FALSE,FALSE,L"");
 
-  if (!FLAG.StartAsTrayIcon) {
-    ShowWindow(hwndMain,nCmdShow);
-    UpdateWindow(hwndMain);
-  }
-  else {
-    ShowWindow(hwndMain,SW_HIDE);    // trick ShowWindow()
-    ShowNotifyIcon(hwndMain,TRUE);
-  }
-
-  // Source Encoding
-  if (lpEncodingArg)
-    iSrcEncoding = Encoding_MatchW(lpEncodingArg);
+  CheckStartAsTrayIcon(nCmdShow);
 
   // Pathname parameter
-  if (lpFileArg /*&& !flagNewFromClipboard*/)
-  {
-    BOOL bOpened = FALSE;
-
+  if (lpFileArg /*&& !flagNewFromClipboard*/){
     // Open from Directory
-    if (PathIsDirectory(lpFileArg)) {
-      WCHAR tchFile[MAX_PATH];
-      if (OpenFileDlg(hwndMain,tchFile,COUNTOF(tchFile),lpFileArg))
-        bOpened = FileLoad(FALSE,FALSE,FALSE,FALSE,tchFile);
-    }
-    else {
-      if (bOpened = FileLoad(FALSE,FALSE,FALSE,FALSE,lpFileArg)) {
-        if (FLAG.JumpTo) { // Jump to position
-          EditJumpTo(hwndEdit,iInitialLine,iInitialColumn);
-          EditEnsureSelectionVisible(hwndEdit);
-        }
-      }
-    }
-    GlobalFree(lpFileArg);
-
-    if (bOpened) {
-      if (FLAG.ChangeNotify == 1) {
-        SETTINGS.FileWatchingMode = 0;
-        SETTINGS.ResetFileWatching = TRUE;
-        InstallFileWatching(szCurFile);
-      }
-      else if (FLAG.ChangeNotify == 2) {
-        SETTINGS.FileWatchingMode = 2;
-        SETTINGS.ResetFileWatching = TRUE;
-        InstallFileWatching(szCurFile);
-      }
-    }
+    OpenFromDirectoryOrFileCommandLine();
   }
-
   else {
+    // Source Encoding
+    if (lpEncodingArg) {
+        iSrcEncoding = Encoding_MatchW(lpEncodingArg);
+    }
     if (iSrcEncoding != -1) {
       iEncoding = iSrcEncoding;
       iOriginalEncoding = iSrcEncoding;
@@ -655,98 +512,27 @@ HWND InitInstance(HINSTANCE hInstance,LPSTR pszCmdLine,int nCmdShow)
   fKeepTitleExcerpt = 0;
 
   // Check for /c [if no file is specified] -- even if a file is specified
-  /*else */if (FLAG.NewFromClipboard) {
-    if (SendMessage(hwndEdit,SCI_CANPASTE,0,0)) {
-      BOOL bAutoIndent2 = SETTINGS.AutoIndent;
-      SETTINGS.AutoIndent = 0;
-      EditJumpTo(hwndEdit,-1,0);
-      SendMessage(hwndEdit,SCI_BEGINUNDOACTION,0,0);
-      if (SendMessage(hwndEdit,SCI_GETLENGTH,0,0) > 0)
-        SendMessage(hwndEdit,SCI_NEWLINE,0,0);
-      SendMessage(hwndEdit,SCI_PASTE,0,0);
-      SendMessage(hwndEdit,SCI_NEWLINE,0,0);
-      SendMessage(hwndEdit,SCI_ENDUNDOACTION,0,0);
-      SETTINGS.AutoIndent = bAutoIndent2;
-      if (FLAG.JumpTo)
-        EditJumpTo(hwndEdit,iInitialLine,iInitialColumn);
-      EditEnsureSelectionVisible(hwndEdit);
-    }
-  }
+  /*else */
+  CheckNewFromClipboard();
 
   // Encoding
   if (0 != FLAG.SetEncoding) {
-    SendMessage(
-      hwndMain,
-      WM_COMMAND,
-      MAKELONG(IDM_ENCODING_ANSI + FLAG.SetEncoding -1,1),
-      0);
+    SendMessage(hwndMain, WM_COMMAND, MAKELONG(IDM_ENCODING_ANSI + FLAG.SetEncoding -1,1), 0);
     FLAG.SetEncoding = 0;
   }
 
   // EOL mode
   if (0 != FLAG.SetEOLMode) {
-    SendMessage(
-      hwndMain,
-      WM_COMMAND,
-      MAKELONG(IDM_LINEENDINGS_CRLF + FLAG.SetEOLMode -1,1),
-      0);
+    SendMessage(hwndMain, WM_COMMAND, MAKELONG(IDM_LINEENDINGS_CRLF + FLAG.SetEOLMode -1,1), 0);
     FLAG.SetEOLMode = 0;
   }
 
-  // Match Text
-  if (FLAG.MatchText && lpMatchArg) {
-    if (lstrlen(lpMatchArg) && SendMessage(hwndEdit,SCI_GETLENGTH,0,0)) {
-
-      UINT cp = (UINT)SendMessage(hwndEdit,SCI_GETCODEPAGE,0,0);
-      WideCharToMultiByte(cp,0,lpMatchArg,-1,efrData.szFind,COUNTOF(efrData.szFind),NULL,NULL);
-      WideCharToMultiByte(CP_UTF8,0,lpMatchArg,-1,efrData.szFindUTF8,COUNTOF(efrData.szFindUTF8),NULL,NULL);
-      cpLastFind = cp;
-
-      if (FLAG.MatchText & 4)
-        efrData.fuFlags |= SCFIND_REGEXP | SCFIND_POSIX;
-      else if (FLAG.MatchText & 8)
-        efrData.bTransformBS = TRUE;
-
-      if (FLAG.MatchText & 2) {
-        if (!FLAG.JumpTo)
-          EditJumpTo(hwndEdit,-1,0);
-        EditFindPrev(hwndEdit,&efrData,FALSE);
-        EditEnsureSelectionVisible(hwndEdit);
-      }
-      else {
-        if (!FLAG.JumpTo)
-          SendMessage(hwndEdit,SCI_DOCUMENTSTART,0,0);
-        EditFindNext(hwndEdit,&efrData,FALSE);
-        EditEnsureSelectionVisible(hwndEdit);
-      }
-    }
-    GlobalFree(lpMatchArg);
-  }
-
+  MatchText();
   // Check for Paste Board option -- after loading files
-  if (FLAG.PasteBoard) {
-    bLastCopyFromMe = TRUE;
-    hwndNextCBChain = SetClipboardViewer(hwndMain);
-    uidsAppTitle = IDS_APPTITLE_PASTEBOARD;
-    SetWindowTitle(hwndMain,uidsAppTitle,fIsElevated,IDS_UNTITLED,szCurFile,
-        SETTINGS.PathNameFormat,bModified || iEncoding != iOriginalEncoding,
-      IDS_READONLY,bReadOnly,szTitleExcerpt);
-    bLastCopyFromMe = FALSE;
-
-    dwLastCopyTime = 0;
-    SetTimer(hwndMain,ID_PASTEBOARDTIMER,100,PasteBoardTimer);
-  }
-
+  CheckPasteBoardOption();
+  
   // check if a lexer was specified from the command line
-  if (FLAG.LexerSpecified) {
-    if (lpSchemeArg) {
-      Style_SetLexerFromName(hwndEdit,szCurFile,lpSchemeArg);
-      LocalFree(lpSchemeArg);
-    }
-    else if (iInitialLexer >=0 && iInitialLexer < NUMLEXERS)
-      Style_SetLexerFromID(hwndEdit,iInitialLexer);
-    FLAG.LexerSpecified = 0;
-  }
+  CheckLexerFromCommandLine();
 
   // If start as tray icon, set current filename as tooltip
   if (FLAG.StartAsTrayIcon)
@@ -756,7 +542,6 @@ HWND InitInstance(HINSTANCE hInstance,LPSTR pszCmdLine,int nCmdShow)
   UpdateStatusbar();
 
   return(hwndMain);
-
 }
 
 
@@ -3888,21 +3673,12 @@ LRESULT MsgCommand(HWND hwnd,WPARAM wParam,LPARAM lParam)
     case IDM_VIEW_STICKYWINPOS:
       bStickyWinPos = IniGetInt(L"Settings2",L"StickyWindowPosition",bStickyWinPos);
       if (!bStickyWinPos) {
-        WINDOWPLACEMENT wndpl;
         WCHAR tchPosX[32], tchPosY[32], tchSizeX[32], tchSizeY[32], tchMaximized[32];
 
-        int ResX = GetSystemMetrics(SM_CXSCREEN);
-        int ResY = GetSystemMetrics(SM_CYSCREEN);
+        const int ResX = GetSystemMetrics(SM_CXSCREEN);
+        const int ResY = GetSystemMetrics(SM_CYSCREEN);
 
-        // GetWindowPlacement
-        wndpl.length = sizeof(WINDOWPLACEMENT);
-        GetWindowPlacement(hwndMain,&wndpl);
-
-        wi.x = wndpl.rcNormalPosition.left;
-        wi.y = wndpl.rcNormalPosition.top;
-        wi.cx = wndpl.rcNormalPosition.right - wndpl.rcNormalPosition.left;
-        wi.cy = wndpl.rcNormalPosition.bottom - wndpl.rcNormalPosition.top;
-        wi.max = (IsZoomed(hwndMain) || (wndpl.flags & WPF_RESTORETOMAXIMIZED));
+        GetWinInfo2(hwndMain, &wi);
 
         wsprintf(tchPosX,L"%ix%i PosX",ResX,ResY);
         wsprintf(tchPosY,L"%ix%i PosY",ResX,ResY);
@@ -6072,70 +5848,6 @@ void ParseCommandLine()
 
 //=============================================================================
 //
-//  LoadFlags()
-//
-//
-void LoadFlags()
-{
-  WCHAR *pIniSection = LocalAlloc(LPTR,sizeof(WCHAR)*32*1024);
-  int   cchIniSection = (int)LocalSize(pIniSection)/sizeof(WCHAR);
-
-  LoadIniSection(L"Settings2",pIniSection,cchIniSection);
-
-  if (!FLAG.ReuseWindow && !FLAG.NoReuseWindow) {
-
-    if (!IniSectionGetInt(pIniSection,L"ReuseWindow",0))
-        FLAG.NoReuseWindow = 1;
-
-    if (IniSectionGetInt(pIniSection,L"SingleFileInstance",0))
-        FLAG.SingleFileInstance = 1;
-  }
-
-  if (FLAG.MultiFileArg == 0) {
-    if (IniSectionGetInt(pIniSection,L"MultiFileArg",0))
-        FLAG.MultiFileArg = 2;
-  }
-
-  if (IniSectionGetInt(pIniSection,L"RelativeFileMRU",1))
-      FLAG.RelativeFileMRU = 1;
-
-  if (IniSectionGetInt(pIniSection,L"PortableMyDocs", FLAG.RelativeFileMRU))
-      FLAG.PortableMyDocs = 1;
-
-  if (IniSectionGetInt(pIniSection,L"NoFadeHidden",0))
-      FLAG.NoFadeHidden = 1;
-
-  FLAG.ToolbarLook = IniSectionGetInt(pIniSection,L"ToolbarLook",IsXP() ? 1 : 2);
-  FLAG.ToolbarLook = max(min(FLAG.ToolbarLook,2),0);
-
-  if (IniSectionGetInt(pIniSection,L"SimpleIndentGuides",0))
-      FLAG.SimpleIndentGuides = 1;
-
-  if (IniSectionGetInt(pIniSection,L"NoHTMLGuess",0))
-      FLAG.NoHTMLGuess = 1;
-
-  if (IniSectionGetInt(pIniSection,L"NoCGIGuess",0))
-      FLAG.NoCGIGuess = 1;
-
-  if (IniSectionGetInt(pIniSection,L"NoFileVariables",0))
-      FLAG.NoFileVariables = 1;
-
-  if (lstrlen(g_wchAppUserModelID) == 0) {
-    IniSectionGetString(pIniSection,L"ShellAppUserModelID",L"(default)",
-      g_wchAppUserModelID,COUNTOF(g_wchAppUserModelID));
-  }
-
-  if (FLAG.UseSystemMRU == 0) {
-    if (IniSectionGetInt(pIniSection,L"ShellUseSystemMRU",0))
-        FLAG.UseSystemMRU = 2;
-  }
-
-  LocalFree(pIniSection);
-}
-
-
-//=============================================================================
-//
 //  FindIniFile()
 //
 //
@@ -7464,8 +7176,9 @@ void SetNotifyIconTitle(HWND hwnd)
     SHGetFileInfo2(szCurFile,0,&shfi,sizeof(SHFILEINFO),SHGFI_DISPLAYNAME);
     PathCompactPathEx(tchTitle,shfi.szDisplayName,COUNTOF(tchTitle)-4,0);
   }
-  else
-    GetString(IDS_UNTITLED,tchTitle,COUNTOF(tchTitle)-4);
+  else {
+      GetString(IDS_UNTITLED, tchTitle, COUNTOF(tchTitle) - 4);
+  }
 
   if (bModified || iEncoding != iOriginalEncoding)
     lstrcpy(nid.szTip,L"* ");
@@ -7634,6 +7347,245 @@ void CALLBACK PasteBoardTimer(HWND hwnd,UINT uMsg,UINT_PTR idEvent,DWORD dwTime)
   }
 }
 
+void GetWinInfo2(HWND hwnd, PTR_WININFO wi)
+{
+    WINDOWPLACEMENT wndpl;
+    wndpl.length = sizeof(WINDOWPLACEMENT);
+    GetWindowPlacement(hwnd, &wndpl);
+
+    wi->x = wndpl.rcNormalPosition.left;
+    wi->y = wndpl.rcNormalPosition.top;
+    wi->cx = wndpl.rcNormalPosition.right - wndpl.rcNormalPosition.left;
+    wi->cy = wndpl.rcNormalPosition.bottom - wndpl.rcNormalPosition.top;
+    wi->max = (IsZoomed(hwnd) || (wndpl.flags & WPF_RESTORETOMAXIMIZED));
+}
+
+void SetWindowPosition()
+{
+    RECT rc = { wi.x, wi.y, wi.x + wi.cx, wi.y + wi.cy };
+    RECT rc2;
+    MONITORINFO mi;
+
+    HMONITOR hMonitor = MonitorFromRect(&rc, MONITOR_DEFAULTTONEAREST);
+    mi.cbSize = sizeof(mi);
+    GetMonitorInfo(hMonitor, &mi);
+
+    if (FLAG.DefaultPos == 1) {
+        wi.x = wi.y = wi.cx = wi.cy = CW_USEDEFAULT;
+        wi.max = 0;
+    }
+    else if (FLAG.DefaultPos >= 4) {
+        SystemParametersInfo(SPI_GETWORKAREA, 0, &rc, 0);
+        if (FLAG.DefaultPos & 8)
+            wi.x = (rc.right - rc.left) / 2;
+        else
+            wi.x = rc.left;
+        wi.cx = rc.right - rc.left;
+        if (FLAG.DefaultPos & (4 | 8))
+            wi.cx /= 2;
+        if (FLAG.DefaultPos & 32)
+            wi.y = (rc.bottom - rc.top) / 2;
+        else
+            wi.y = rc.top;
+        wi.cy = rc.bottom - rc.top;
+        if (FLAG.DefaultPos & (16 | 32))
+            wi.cy /= 2;
+        if (FLAG.DefaultPos & 64) {
+            wi.x = rc.left;
+            wi.y = rc.top;
+            wi.cx = rc.right - rc.left;
+            wi.cy = rc.bottom - rc.top;
+        }
+        if (FLAG.DefaultPos & 128) {
+            wi.x += (FLAG.DefaultPos & 8) ? 4 : 8;
+            wi.cx -= (FLAG.DefaultPos & (4 | 8)) ? 12 : 16;
+            wi.y += (FLAG.DefaultPos & 32) ? 4 : 8;
+            wi.cy -= (FLAG.DefaultPos & (16 | 32)) ? 12 : 16;
+        }
+    }
+
+    else if (FLAG.DefaultPos == 2 || FLAG.DefaultPos == 3 ||
+        wi.x == CW_USEDEFAULT || wi.y == CW_USEDEFAULT ||
+        wi.cx == CW_USEDEFAULT || wi.cy == CW_USEDEFAULT) {
+
+        // default window position
+        SystemParametersInfo(SPI_GETWORKAREA, 0, &rc, 0);
+        wi.y = rc.top + 16;
+        wi.cy = rc.bottom - rc.top - 32;
+        wi.cx = min(rc.right - rc.left - 32, wi.cy);
+        wi.x = (FLAG.DefaultPos == 3) ? rc.left + 16 : rc.right - wi.cx - 16;
+    }
+    else {
+        // fit window into working area of current monitor
+        wi.x += (mi.rcWork.left - mi.rcMonitor.left);
+        wi.y += (mi.rcWork.top - mi.rcMonitor.top);
+        if (wi.x < mi.rcWork.left)
+            wi.x = mi.rcWork.left;
+        if (wi.y < mi.rcWork.top)
+            wi.y = mi.rcWork.top;
+        if (wi.x + wi.cx > mi.rcWork.right) {
+            wi.x -= (wi.x + wi.cx - mi.rcWork.right);
+            if (wi.x < mi.rcWork.left)
+                wi.x = mi.rcWork.left;
+            if (wi.x + wi.cx > mi.rcWork.right)
+                wi.cx = mi.rcWork.right - wi.x;
+        }
+        if (wi.y + wi.cy > mi.rcWork.bottom) {
+            wi.y -= (wi.y + wi.cy - mi.rcWork.bottom);
+            if (wi.y < mi.rcWork.top)
+                wi.y = mi.rcWork.top;
+            if (wi.y + wi.cy > mi.rcWork.bottom)
+                wi.cy = mi.rcWork.bottom - wi.y;
+        }
+        SetRect(&rc, wi.x, wi.y, wi.x + wi.cx, wi.y + wi.cy);
+        if (!IntersectRect(&rc2, &rc, &mi.rcWork)) {
+            wi.y = mi.rcWork.top + 16;
+            wi.cy = mi.rcWork.bottom - mi.rcWork.top - 32;
+            wi.cx = min(mi.rcWork.right - mi.rcWork.left - 32, wi.cy);
+            wi.x = mi.rcWork.right - wi.cx - 16;
+        }
+    }
+}
+
+void CheckPasteBoardOption()
+{
+    if (FLAG.PasteBoard) {
+        bLastCopyFromMe = TRUE;
+        hwndNextCBChain = SetClipboardViewer(hwndMain);
+        uidsAppTitle = IDS_APPTITLE_PASTEBOARD;
+        SetWindowTitle(hwndMain, uidsAppTitle, fIsElevated, IDS_UNTITLED, szCurFile,
+            SETTINGS.PathNameFormat, bModified || iEncoding != iOriginalEncoding,
+            IDS_READONLY, bReadOnly, szTitleExcerpt);
+        bLastCopyFromMe = FALSE;
+
+        dwLastCopyTime = 0;
+        SetTimer(hwndMain, ID_PASTEBOARDTIMER, 100, PasteBoardTimer);
+    }
+}
+
+void CheckLexerFromCommandLine()
+{
+    if (FLAG.LexerSpecified) {
+        if (lpSchemeArg) {
+            Style_SetLexerFromName(hwndEdit, szCurFile, lpSchemeArg);
+            LocalFree(lpSchemeArg);
+        }
+        else if (iInitialLexer >= 0 && iInitialLexer < NUMLEXERS) {
+            Style_SetLexerFromID(hwndEdit, iInitialLexer);
+        }
+        FLAG.LexerSpecified = 0;
+    }
+}
+
+void CheckStartAsTrayIcon(int nCmdShow)
+{
+    if (!FLAG.StartAsTrayIcon) {
+        ShowWindow(hwndMain, nCmdShow);
+        UpdateWindow(hwndMain);
+    }
+    else {
+        ShowWindow(hwndMain, SW_HIDE);    // trick ShowWindow()
+        ShowNotifyIcon(hwndMain, TRUE);
+    }
+}
+
+void CheckNewFromClipboard()
+{
+    if (FLAG.NewFromClipboard) {
+        if (SendMessage(hwndEdit, SCI_CANPASTE, 0, 0)) {
+            const BOOL bAutoIndent2 = SETTINGS.AutoIndent;
+            SETTINGS.AutoIndent = 0;
+            EditJumpTo(hwndEdit, -1, 0);
+            SendMessage(hwndEdit, SCI_BEGINUNDOACTION, 0, 0);
+            if (SendMessage(hwndEdit, SCI_GETLENGTH, 0, 0) > 0) {
+                SendMessage(hwndEdit, SCI_NEWLINE, 0, 0);
+            }
+            SendMessage(hwndEdit, SCI_PASTE, 0, 0);
+            SendMessage(hwndEdit, SCI_NEWLINE, 0, 0);
+            SendMessage(hwndEdit, SCI_ENDUNDOACTION, 0, 0);
+            SETTINGS.AutoIndent = bAutoIndent2;
+            if (FLAG.JumpTo) {
+                EditJumpTo(hwndEdit, iInitialLine, iInitialColumn);
+            }
+            EditEnsureSelectionVisible(hwndEdit);
+        }
+    }
+}
+
+void MatchText()
+{
+    if (FLAG.MatchText && lpMatchArg) {
+        if (lstrlen(lpMatchArg) && SendMessage(hwndEdit, SCI_GETLENGTH, 0, 0)) {
+            UINT cp = (UINT)SendMessage(hwndEdit, SCI_GETCODEPAGE, 0, 0);
+            WideCharToMultiByte(cp, 0, lpMatchArg, -1, efrData.szFind, COUNTOF(efrData.szFind), NULL, NULL);
+            WideCharToMultiByte(CP_UTF8, 0, lpMatchArg, -1, efrData.szFindUTF8, COUNTOF(efrData.szFindUTF8), NULL, NULL);
+            cpLastFind = cp;
+
+            if (FLAG.MatchText & 4)
+                efrData.fuFlags |= SCFIND_REGEXP | SCFIND_POSIX;
+            else if (FLAG.MatchText & 8)
+                efrData.bTransformBS = TRUE;
+
+            if (FLAG.MatchText & 2) {
+                if (!FLAG.JumpTo)
+                    EditJumpTo(hwndEdit, -1, 0);
+                EditFindPrev(hwndEdit, &efrData, FALSE);
+                EditEnsureSelectionVisible(hwndEdit);
+            }
+            else {
+                if (!FLAG.JumpTo)
+                    SendMessage(hwndEdit, SCI_DOCUMENTSTART, 0, 0);
+                EditFindNext(hwndEdit, &efrData, FALSE);
+                EditEnsureSelectionVisible(hwndEdit);
+            }
+        }
+        GlobalFree(lpMatchArg);
+    }
+}
+
+void OpenFromDirectoryOrFileCommandLine()
+{
+    BOOL bOpened = FALSE;
+    if (PathIsDirectory(lpFileArg)) {
+        WCHAR tchFile[MAX_PATH];
+        if (OpenFileDlg(hwndMain, tchFile, COUNTOF(tchFile), lpFileArg))
+            bOpened = FileLoad(FALSE, FALSE, FALSE, FALSE, tchFile);
+    }
+    else {
+        if (bOpened = FileLoad(FALSE, FALSE, FALSE, FALSE, lpFileArg)) {
+            if (FLAG.JumpTo) { // Jump to position
+                EditJumpTo(hwndEdit, iInitialLine, iInitialColumn);
+                EditEnsureSelectionVisible(hwndEdit);
+            }
+        }
+    }
+    GlobalFree(lpFileArg);
+
+    if (bOpened) {
+        if (FLAG.ChangeNotify == 1) {
+            SETTINGS.FileWatchingMode = 0;
+        }
+        else if (FLAG.ChangeNotify == 2) {
+            SETTINGS.FileWatchingMode = 2;
+        }
+        SETTINGS.ResetFileWatching = TRUE;
+        InstallFileWatching(szCurFile);
+    }
+}
+
+HWND CreateWindowNotepad(HINSTANCE hInstance)
+{
+    return CreateWindowEx(0, wchWndClass, L"Notepad2",
+        WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+        wi.x,
+        wi.y,
+        wi.cx,
+        wi.cy,
+        NULL,
+        NULL,
+        hInstance,
+        NULL);
+}
 
 
 ///  End of Notepad2.c  \\\

@@ -5155,10 +5155,7 @@ INT_PTR CALLBACK Style_SelectLexerDlgProc(HWND hwnd,UINT umsg,WPARAM wParam,LPAR
 //
 void Style_SelectLexerDlg(HWND hwnd)
 {
-  if (IDOK == ThemedDialogBoxParam(g_hInstance,
-                MAKEINTRESOURCE(IDD_STYLESELECT),
-                GetParent(hwnd),Style_SelectLexerDlgProc,0))
-
+  if (IDOK == ThemedDialogBoxParam(g_hInstance,MAKEINTRESOURCE(IDD_STYLESELECT), GetParent(hwnd),Style_SelectLexerDlgProc,0))
     Style_SetLexer(hwnd,pLexCurrent);
 }
 

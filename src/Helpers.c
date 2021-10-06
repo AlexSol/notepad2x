@@ -954,7 +954,6 @@ void PathRelativeToApp(
     lstrcpyn(lpszDest,wchResult,(cchDest == 0) ? MAX_PATH : cchDest);
 }
 
-
 //=============================================================================
 //
 //  PathAbsoluteFromApp()
